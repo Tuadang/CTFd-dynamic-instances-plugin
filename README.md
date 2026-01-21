@@ -1,1 +1,2 @@
-# CTFd-On-Demand-Containers
+# CTFd dynamic instances
+
