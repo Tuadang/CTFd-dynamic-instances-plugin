@@ -1,6 +1,6 @@
 from CTFd.plugins.challenges import BaseChallenge
 from CTFd.models import db, Challenges
-from utils import serialize_challenge
+from ..utils import serialize_challenge
 
 class K8sChallenge(BaseChallenge):
     id = "k8s"
