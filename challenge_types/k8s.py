@@ -19,7 +19,7 @@ class K8sChallenge(BaseChallenge):
 
     @staticmethod
     def create(request):
-        data = request.form
+        data = request.get_json()
         challenge = Challenges(
             name=data["name"],
             description=data["description"],
