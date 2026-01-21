@@ -4,7 +4,7 @@ CTFd.plugin.run((_CTFd) => {
     $('#start-instance').click(() => {
         $.post('/plugins/dynamic_instances/start', {
             challenge_id: CHALLENGE_ID,
-            type: 'vm'
+            type: 'k8s'
         }).done((data) => {
             $('#instance-info').text(JSON.stringify(data, null, 2))
         })
@@ -13,7 +13,7 @@ CTFd.plugin.run((_CTFd) => {
     $('#stop-instance').click(() => {
         $.post('/plugins/dynamic_instances/stop', {
             challenge_id: CHALLENGE_ID,
-            type: 'vm'
+            type: 'k8s'
         }).done((data) => {
             $('#instance-info').text(JSON.stringify(data, null, 2))
         })
@@ -22,7 +22,7 @@ CTFd.plugin.run((_CTFd) => {
     $('#status-instance').click(() => {
         $.post('/plugins/dynamic_instances/status', {
             challenge_id: CHALLENGE_ID,
-            type: 'vm'
+            type: 'k8s'
         }).done((data) => {
             $('#instance-info').text(JSON.stringify(data, null, 2))
         })
