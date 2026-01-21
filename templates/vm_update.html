@@ -1,4 +1,6 @@
 <form>
+    <input type="hidden" name="type" value="vm">
+
     <div class="form-group">
         <label>Name</label>
         <input class="form-control" type="text" name="name" value="{{ challenge.name }}" required>
@@ -19,15 +21,12 @@
         <input class="form-control" type="text" name="category" value="{{ challenge.category }}" required>
     </div>
 
-    <!-- Custom field for VM provisioning -->
     <div class="form-group">
-        <label>VM Template ID</label>
+        <label>Image</label>
         <input class="form-control" type="text" name="template" value="{{ challenge.template }}">
     </div>
 
-    <div>
-		<button class="btn btn-success btn-outlined float-right" type="submit">
-			Update
-		</button>
-	</div>
+    <div class="form-group">
+        <button class="btn btn-primary float-right update-challenge-submit" type="submit">Update</button>
+    </div>
 </form>
