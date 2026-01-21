@@ -35,7 +35,10 @@ class K8sChallenge(BaseChallenge):
         db.session.commit()
 
         # Manual serialization
-        return { "success": True, "data": serialize_challenge(challenge) }
+        return {
+            "success": True,
+            "data": serialize_challenge(challenge)
+        }
 
 
 
@@ -57,7 +60,10 @@ class K8sChallenge(BaseChallenge):
         challenge.template = data.get("template")
 
         db.session.commit()
-        return { "success": True, "data": serialize_challenge(challenge) }
+        return {
+            "success": True,
+            "data": serialize_challenge(challenge)
+        }
 
 
     @staticmethod

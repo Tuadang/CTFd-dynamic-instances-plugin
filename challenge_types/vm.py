@@ -34,7 +34,10 @@ class VMChallenge(BaseChallenge):
         db.session.commit()
 
         # Manual serialization
-        return { "success": True, "data": serialize_challenge(challenge) }
+        return {
+            "success": True,
+            "data": serialize_challenge(challenge)
+        }
 
 
 
@@ -64,7 +67,10 @@ class VMChallenge(BaseChallenge):
         challenge.template = data.get("template")
 
         db.session.commit()
-        return { "success": True, "data": serialize_challenge(challenge) }
+        return {
+            "success": True,
+            "data": serialize_challenge(challenge)
+        }
 
 
     @staticmethod
