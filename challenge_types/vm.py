@@ -5,9 +5,9 @@ class VMChallenge(BaseChallenge):
     id = "vm"
     name = "VM Challenge"
     templates = {
-        "create": "/plugins/dynamic_instances/templates/vm_challenge.html",
-        "update": "/plugins/dynamic_instances/templates/vm_challenge.html",
-        "view": "/plugins/dynamic_instances/templates/vm_challenge.html"
+        "create": "/plugins/dynamic_instances/templates/vm_create.html",
+        "update": "/plugins/dynamic_instances/templates/vm_update.html",
+        "view": "/plugins/dynamic_instances/templates/vm_view.html"
     }
     scripts = {
         "create": "/plugins/dynamic_instances/static/js/vm.js",
