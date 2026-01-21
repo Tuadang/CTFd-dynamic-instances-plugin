@@ -3,6 +3,16 @@
 {% block value %}
 <div class="form-group">
     <label>
+        Value:<br>
+        <small class="form-text text-muted">
+            This is how many points are rewarded for solving this challenge.
+        </small>
+    </label>
+    <input type="number" class="form-control" name="value" placeholder="Enter value" required>
+</div>
+
+<div class="form-group">
+    <label>
         Image<br>
         <small class="form-text text-muted">
             Docker image for this Kubernetes challenge.
