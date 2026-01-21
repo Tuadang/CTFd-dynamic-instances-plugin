@@ -41,7 +41,7 @@ class VMChallenge(BaseChallenge):
 
     @staticmethod
     def update(challenge, request):
-        data = request.form
+        data = request.get_json()
         challenge.name = data["name"]
         challenge.description = data["description"]
         challenge.value = data["value"]
