@@ -1,5 +1,4 @@
 from CTFd.plugins.challenges import BaseChallenge
-from CTFd.utils.decorators import serialize
 from CTFd.models import db, Challenges
 from flask import render_template
 
@@ -35,10 +34,20 @@ class K8sChallenge(BaseChallenge):
         db.session.add(challenge)
         db.session.commit()
 
+        # Manual serialization
         return {
             "success": True,
-            "data": serialize(challenge)
+            "data": {
+                "id": challenge.id,
+                "name": challenge.name,
+                "description": challenge.description,
+                "value": challenge.value,
+                "category": challenge.category,
+                "type": challenge.type,
+                "template": challenge.template
+            }
         }
+
 
 
 
