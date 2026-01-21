@@ -1,33 +1,17 @@
-<form>
-    <input type="hidden" name="type" value="k8s">
-    <input type="hidden" name="state" value="hidden">
+{% extends "admin/challenges/create.html" %}
 
-    <div class="form-group">
-        <label>Name</label>
-        <input class="form-control" type="text" name="name" required>
-    </div>
+{% block type %}
+<input type="hidden" name="type" value="k8s">
+{% endblock %}
 
-    <div class="form-group">
-        <label>Description</label>
-        <textarea class="form-control" name="description" required></textarea>
-    </div>
-
-    <div class="form-group">
-        <label>Value</label>
-        <input class="form-control" type="number" name="value" required>
-    </div>
-
-    <div class="form-group">
-        <label>Category</label>
-        <input class="form-control" type="text" name="category" required>
-    </div>
-
-    <div class="form-group">
-        <label>Image</label>
-        <input class="form-control" type="text" name="template" placeholder="docker image or vm template id">
-    </div>
-
-    <div class="form-group">
-        <button class="btn btn-primary float-right create-challenge-submit" type="submit">Create</button>
-    </div>
-</form>
+{% block extra %}
+<div class="form-group">
+    <label>
+        Image<br>
+        <small class="form-text text-muted">
+            Docker image for this Kubernetes challenge.
+        </small>
+    </label>
+    <input class="form-control" type="text" name="template" placeholder="e.g. ghcr.io/my/image:latest">
+</div>
+{% endblock %}

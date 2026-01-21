@@ -1,32 +1,17 @@
-<form>
-    <input type="hidden" name="type" value="vm">
+{% extends "admin/challenges/update.html" %}
 
-    <div class="form-group">
-        <label>Name</label>
-        <input class="form-control" type="text" name="name" value="{{ challenge.name }}" required>
-    </div>
+{% block type %}
+<input type="hidden" name="type" value="vm">
+{% endblock %}
 
-    <div class="form-group">
-        <label>Description</label>
-        <textarea class="form-control" name="description" required>{{ challenge.description }}</textarea>
-    </div>
-
-    <div class="form-group">
-        <label>Value</label>
-        <input class="form-control" type="number" name="value" value="{{ challenge.value }}" required>
-    </div>
-
-    <div class="form-group">
-        <label>Category</label>
-        <input class="form-control" type="text" name="category" value="{{ challenge.category }}" required>
-    </div>
-
-    <div class="form-group">
-        <label>Image</label>
-        <input class="form-control" type="text" name="template" value="{{ challenge.template }}">
-    </div>
-
-    <div class="form-group">
-        <button class="btn btn-primary float-right update-challenge-submit" type="submit">Update</button>
-    </div>
-</form>
+{% block extra %}
+<div class="form-group">
+    <label>
+        VM Template ID<br>
+        <small class="form-text text-muted">
+            Proxmox template ID or name.
+        </small>
+    </label>
+    <input class="form-control" type="text" name="template" value="{{ challenge.template }}">
+</div>
+{% endblock %}
