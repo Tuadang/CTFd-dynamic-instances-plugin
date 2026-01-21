@@ -12,9 +12,9 @@ class K8sChallenge(BaseChallenge):
     }
 
     scripts = {
-        "create": "/plugins/dynamic_instances/static/js/k8s.js",
-        "update": "/plugins/dynamic_instances/static/js/k8s.js",
-        "view": "/plugins/dynamic_instances/static/js/k8s.js"
+        "create": "/plugins/dynamic_instances/static/js/k8s_create.js",
+        "update": "/plugins/dynamic_instances/static/js/k8s_update.js",
+        "view": "/plugins/dynamic_instances/static/js/k8s_view.js"
     }
 
     @staticmethod

@@ -10,9 +10,9 @@ class VMChallenge(BaseChallenge):
         "view": "/plugins/dynamic_instances/templates/vm_view.html"
     }
     scripts = {
-        "create": "/plugins/dynamic_instances/static/js/vm.js",
-        "update": "/plugins/dynamic_instances/static/js/vm.js",
-        "view": "/plugins/dynamic_instances/static/js/vm.js"
+        "create": "/plugins/dynamic_instances/static/js/vm_create.js",
+        "update": "/plugins/dynamic_instances/static/js/vm_update.js",
+        "view": "/plugins/dynamic_instances/static/js/vm_view.js"
     }
 
     @staticmethod
