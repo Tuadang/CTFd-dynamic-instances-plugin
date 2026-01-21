@@ -15,3 +15,7 @@
     <input class="form-control" type="text" name="template" placeholder="e.g. ghcr.io/my/image:latest">
 </div>
 {% endblock %}
+
+{% block type %}
+<input type="hidden" value="k8s" name="type" id="chaltype">
+{% endblock %}
