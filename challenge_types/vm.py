@@ -1,4 +1,5 @@
 from CTFd.plugins.challenges import BaseChallenge
+from CTFd.utils import serializers
 from CTFd.models import db, Challenges
 
 class VMChallenge(BaseChallenge):
@@ -31,7 +32,10 @@ class VMChallenge(BaseChallenge):
 
         db.session.add(challenge)
         db.session.commit()
-        return challenge
+        return {
+            "success": True,
+            "data": serializers.serialize_challenge(challenge)
+        }
 
 
     @staticmethod

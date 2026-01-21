@@ -1,4 +1,5 @@
 from CTFd.plugins.challenges import BaseChallenge
+from CTFd.utils import serializers
 from CTFd.models import db, Challenges
 from flask import render_template
 
@@ -20,6 +21,7 @@ class K8sChallenge(BaseChallenge):
     @staticmethod
     def create(request):
         data = request.get_json()
+
         challenge = Challenges(
             name=data["name"],
             description=data["description"],
@@ -28,12 +30,16 @@ class K8sChallenge(BaseChallenge):
             type="k8s"
         )
 
-        # Save custom field
         challenge.template = data.get("template")
 
         db.session.add(challenge)
         db.session.commit()
-        return challenge
+
+        return {
+            "success": True,
+            "data": serializers.serialize_challenge(challenge)
+        }
+
 
 
     @staticmethod
