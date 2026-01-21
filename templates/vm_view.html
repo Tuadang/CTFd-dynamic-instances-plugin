@@ -1,0 +1,12 @@
+<div class="challenge-view">
+    <h3>{{ challenge.name }}</h3>
+    <p>{{ challenge.description }}</p>
+
+    <input type="hidden" id="challenge-type" value="vm">
+
+    <button class="btn btn-primary" id="start-instance">Start VM Instance</button>
+    <button class="btn btn-danger" id="stop-instance">Stop Instance</button>
+    <button class="btn btn-info" id="status-instance">Check Status</button>
+
+    <pre id="instance-info" style="margin-top: 1rem;"></pre>
+</div>

@@ -6,10 +6,11 @@ class K8sChallenge(BaseChallenge):
     id = "k8s"
     name = "Kubernetes Challenge"
     templates = {
-        "create": "/plugins/dynamic_instances/templates/k8s_challenge.html",
-        "update": "/plugins/dynamic_instances/templates/k8s_challenge.html",
-        "view": "/plugins/dynamic_instances/templates/k8s_challenge.html"
+    "create": "/plugins/dynamic_instances/templates/k8s_create.html",
+    "update": "/plugins/dynamic_instances/templates/k8s_update.html",
+    "view": "/plugins/dynamic_instances/templates/k8s_view.html"
     }
+
     scripts = {
         "create": "/plugins/dynamic_instances/static/js/k8s.js",
         "update": "/plugins/dynamic_instances/static/js/k8s.js",
@@ -26,13 +27,19 @@ class K8sChallenge(BaseChallenge):
             category=data["category"],
             type="k8s"
         )
+
+        # Save custom field
+        challenge.template = data.get("template")
+
         db.session.add(challenge)
         db.session.commit()
         return challenge
 
+
     @staticmethod
     def read(challenge):
         return challenge
+
 
     @staticmethod
     def update(challenge, request):
@@ -41,10 +48,16 @@ class K8sChallenge(BaseChallenge):
         challenge.description = data["description"]
         challenge.value = data["value"]
         challenge.category = data["category"]
+
+        # Update custom field
+        challenge.template = data.get("template")
+
         db.session.commit()
         return challenge
+
 
     @staticmethod
     def delete(challenge):
         db.session.delete(challenge)
         db.session.commit()
+

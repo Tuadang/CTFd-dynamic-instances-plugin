@@ -25,13 +25,19 @@ class VMChallenge(BaseChallenge):
             category=data["category"],
             type="vm"
         )
+
+        # Save custom field
+        challenge.template = data.get("template")
+
         db.session.add(challenge)
         db.session.commit()
         return challenge
 
+
     @staticmethod
     def read(challenge):
         return challenge
+
 
     @staticmethod
     def update(challenge, request):
@@ -40,10 +46,16 @@ class VMChallenge(BaseChallenge):
         challenge.description = data["description"]
         challenge.value = data["value"]
         challenge.category = data["category"]
+
+        # Update custom field
+        challenge.template = data.get("template")
+
         db.session.commit()
         return challenge
+
 
     @staticmethod
     def delete(challenge):
         db.session.delete(challenge)
         db.session.commit()
+
