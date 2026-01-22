@@ -38,7 +38,7 @@ class K8sChallenge(BaseChallenge):
 
         return {"success": True, "data": serialize_challenge(challenge)}
 
-    @staticmethod
+    @classmethod
     def read(cls, challenge):
         """
         This method is in used to access the data of a challenge in a format processable by the front end.
