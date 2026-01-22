@@ -33,6 +33,9 @@ class VMChallenge(BaseChallenge):
         db.session.add(challenge)
         db.session.commit()
 
+        # At this exact moment, challenge.id is available 
+        print("New challenge ID:", challenge.id)
+
         # Manual serialization
         return {
             "success": True,
