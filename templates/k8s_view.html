@@ -8,13 +8,35 @@
 
 {% block input %}
 <div class="challenge-view">
-  <!-- Required so JS can read the challenge id -->
-  <input type="hidden" id="challenge-id" value="{{ challenge.id }}">
 
+  <!-- REQUIRED: challenge id for CTFd + your JS -->
+  <input
+    type="hidden"
+    id="challenge-id"
+    class="challenge-id"
+    value="{{ challenge.id }}"
+  >
+
+  <!-- REQUIRED: challenge input (can be hidden) -->
+  <input
+    type="text"
+    id="challenge-input"
+    class="challenge-input form-control d-none"
+    name="submission"
+    placeholder="Flag"
+  >
+
+  <!-- K8s controls -->
   <div class="mb-3">
-    <button id="start-instance" class="btn btn-success btn-sm">Start instance</button>
-    <button id="status-instance" class="btn btn-info btn-sm">Status</button>
-    <button id="stop-instance" class="btn btn-danger btn-sm">Stop instance</button>
+    <button id="start-instance" class="btn btn-success btn-sm">
+      Start instance
+    </button>
+    <button id="status-instance" class="btn btn-info btn-sm">
+      Status
+    </button>
+    <button id="stop-instance" class="btn btn-danger btn-sm">
+      Stop instance
+    </button>
   </div>
 
   <pre
@@ -29,10 +51,11 @@
       font-size:12px;
     "
   ></pre>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/k8s_view.js') }}"></script>
+<script src="/plugins/dynamic_instances/static/js/k8s_view.js"></script>
 {% endblock %}
