@@ -87,6 +87,20 @@ console.log("[k8s] k8s_view.js loaded");
       return res.json();
     }
 
+    // Example of what your JS update logic might look like
+    function updateUI(data) {
+        const connInput = document.getElementById('instance-connection');
+        const statusBadge = document.getElementById('instance-status-badge');
+
+        if (data.status === 'running') {
+            connInput.value = data.connection_string; // e.g. "nc 10.10.10.10 1337"
+            statusBadge.innerHTML = '<span class="badge bg-success">Online</span>';
+        } else {
+            connInput.value = "Instance not started...";
+            statusBadge.innerHTML = '<span class="badge bg-danger">Offline</span>';
+        }
+    }
+
     startBtn?.addEventListener("click", async () => {
       console.log("[k8s] Start clicked");
       output.textContent = "";
