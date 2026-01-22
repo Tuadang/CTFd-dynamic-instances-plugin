@@ -3,18 +3,29 @@ console.log("[k8s] k8s_view.js loaded");
 (function () {
   "use strict";
 
-  // REQUIRED: define challenge object
+  // REQUIRED: challenge metadata object
   CTFd._internal.challenge.data = {};
   CTFd._internal.challenge.renderer = "k8s";
 
-  // We do NOT use normal flag submission
-  CTFd._internal.challenge.submit = function () {
-    return Promise.resolve();
+  // REQUIRED: must exist or CTFd crashes
+  CTFd._internal.challenge.preRender = function () {
+    console.log("[k8s] preRender()");
   };
 
-  // Called after modal HTML is injected
+  // REQUIRED: legacy, still must exist
+  CTFd._internal.challenge.render = function () {
+    console.log("[k8s] render()");
+  };
+
+  // Called AFTER modal HTML is injected
   CTFd._internal.challenge.postRender = function () {
+    console.log("[k8s] postRender()");
     initK8s();
+  };
+
+  // We don’t submit flags for k8s
+  CTFd._internal.challenge.submit = function () {
+    return Promise.resolve();
   };
 
   function waitForElement(selector, timeout = 5000) {
@@ -34,10 +45,12 @@ console.log("[k8s] k8s_view.js loaded");
   }
 
   async function initK8s() {
-    console.log("[k8s] init() called");
+    console.log("[k8s] initK8s()");
+
     try {
       await waitForElement(".challenge-view");
     } catch {
+      console.warn("[k8s] .challenge-view not found");
       return;
     }
 
@@ -47,7 +60,10 @@ console.log("[k8s] k8s_view.js loaded");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
 
-    if (!challengeId || !output) return;
+    if (!challengeId || !output) {
+      console.warn("[k8s] missing elements");
+      return;
+    }
 
     function log(msg) {
       output.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
@@ -72,7 +88,7 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     startBtn?.addEventListener("click", async () => {
-      console.log("[k8s] Start button clicked");
+      console.log("[k8s] Start clicked");
       output.textContent = "";
       log("Starting instance...");
       try {
