@@ -1,3 +1,5 @@
+console.log("[k8s] k8s_view.js loaded");
+
 (function () {
   "use strict";
 
@@ -32,6 +34,7 @@
   }
 
   async function initK8s() {
+    console.log("[k8s] init() called");
     try {
       await waitForElement(".challenge-view");
     } catch {
@@ -69,6 +72,7 @@
     }
 
     startBtn?.addEventListener("click", async () => {
+      console.log("[k8s] Start button clicked");
       output.textContent = "";
       log("Starting instance...");
       try {
