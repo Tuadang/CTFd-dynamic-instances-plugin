@@ -1,15 +1,15 @@
 {% extends "challenge.html" %}
 
 {% block description %}
-<span class="challenge-desc">
+<div class="challenge-desc mb-4">
   {{ challenge.description | safe }}
-</span>
+</div>
 {% endblock %}
 
 {% block input %}
 <div class="challenge-view">
 
-  <!-- REQUIRED: challenge id for CTFd + your JS -->
+  <!-- REQUIRED: challenge id -->
   <input
     type="hidden"
     id="challenge-id"
@@ -17,45 +17,56 @@
     value="{{ challenge.id }}"
   >
 
-  <!-- REQUIRED: challenge input (can be hidden) -->
+  <!-- Optional hidden input to keep CTFd happy -->
   <input
     type="text"
     id="challenge-input"
     class="challenge-input form-control d-none"
     name="submission"
-    placeholder="Flag"
   >
 
-  <!-- K8s controls -->
-  <div class="mb-3">
-    <button id="start-instance" class="btn btn-success btn-sm">
-      Start instance
-    </button>
-    <button id="status-instance" class="btn btn-info btn-sm">
-      Status
-    </button>
-    <button id="stop-instance" class="btn btn-danger btn-sm">
-      Stop instance
-    </button>
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+      <strong>Kubernetes Instance Control</strong>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Buttons -->
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <button id="start-instance" class="btn btn-success">
+          <i class="fa fa-play me-1"></i> Start
+        </button>
+
+        <button id="status-instance" class="btn btn-info text-white">
+          <i class="fa fa-info-circle me-1"></i> Status
+        </button>
+
+        <button id="stop-instance" class="btn btn-danger">
+          <i class="fa fa-stop me-1"></i> Stop
+        </button>
+      </div>
+
+      <!-- Output console -->
+      <div class="border rounded bg-black text-success p-2">
+        <pre
+          id="instance-info"
+          class="mb-0"
+          style="
+            min-height: 140px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+          "
+        ></pre>
+      </div>
+
+    </div>
   </div>
-
-  <pre
-    id="instance-info"
-    style="
-      background:#111;
-      color:#0f0;
-      padding:10px;
-      min-height:120px;
-      max-height:300px;
-      overflow:auto;
-      font-size:12px;
-    "
-  ></pre>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="/plugins/dynamic_instances/static/js/k8s_view.js"></script>
+<script src="{{ url_for('static', filename='js/k8s_view.js') }}"></script>
 {% endblock %}
