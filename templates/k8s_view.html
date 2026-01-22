@@ -8,51 +8,27 @@
 
 {% block input %}
 <div class="challenge-view">
+  <!-- Required so JS can read the challenge id -->
+  <input type="hidden" id="challenge-id" value="{{ challenge.id }}">
 
-  <!-- REQUIRED: challenge id -->
-  <input
-    id="challenge-id"
-    class="challenge-id"
-    type="hidden"
-    value="{{ challenge.id }}"
-  >
-
-  <!-- REQUIRED: flag input (can be hidden if you want) -->
-  <input
-    id="challenge-input"
-    class="challenge-input form-control d-none"
-    type="text"
-    name="submission"
-    placeholder="Flag"
-    x-model="submission"
-  >
-
-  <!-- REQUIRED: challenge type -->
-  <input
-    type="hidden"
-    id="challenge-type"
-    value="{{ challenge.type }}"
-  >
-
-  <!-- Your custom K8s controls -->
-  <div class="btn-group mb-3" role="group">
-    <button type="button" class="btn btn-primary" id="start-instance">
-      Start Instance
-    </button>
-    <button type="button" class="btn btn-danger" id="stop-instance">
-      Stop Instance
-    </button>
-    <button type="button" class="btn btn-info" id="status-instance">
-      Check Status
-    </button>
+  <div class="mb-3">
+    <button id="start-instance" class="btn btn-success btn-sm">Start instance</button>
+    <button id="status-instance" class="btn btn-info btn-sm">Status</button>
+    <button id="stop-instance" class="btn btn-danger btn-sm">Stop instance</button>
   </div>
 
   <pre
     id="instance-info"
-    class="border rounded p-2 bg-dark text-light"
-    style="min-height: 6rem;"
+    style="
+      background:#111;
+      color:#0f0;
+      padding:10px;
+      min-height:120px;
+      max-height:300px;
+      overflow:auto;
+      font-size:12px;
+    "
   ></pre>
-
 </div>
 {% endblock %}
 

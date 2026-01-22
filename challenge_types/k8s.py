@@ -1,20 +1,22 @@
 from CTFd.plugins.challenges import BaseChallenge
 from CTFd.models import db, Challenges
+from CTFd.utils.user import get_current_user
 from ..utils import serialize_challenge
 
 class K8sChallenge(BaseChallenge):
     id = "k8s"
     name = "Kubernetes Challenge"
+
     templates = {
-    "create": "/plugins/dynamic_instances/templates/k8s_create.html",
-    "update": "/plugins/dynamic_instances/templates/k8s_update.html",
-    "view": "/plugins/dynamic_instances/templates/k8s_view.html"
+        "create": "/plugins/dynamic_instances/templates/k8s_create.html",
+        "update": "/plugins/dynamic_instances/templates/k8s_update.html",
+        "view": "/plugins/dynamic_instances/templates/k8s_view.html",
     }
 
     scripts = {
         "create": "/plugins/dynamic_instances/static/js/k8s_create.js",
         "update": "/plugins/dynamic_instances/static/js/k8s_update.js",
-        "view": "/plugins/dynamic_instances/static/js/k8s_view.js"
+        "view": "/plugins/dynamic_instances/static/js/k8s_view.js",
     }
 
     @staticmethod
@@ -26,30 +28,19 @@ class K8sChallenge(BaseChallenge):
             description=data["description"],
             value=data["value"],
             category=data["category"],
-            type="k8s"
+            type="k8s",
         )
 
         challenge.template = data.get("template")
 
         db.session.add(challenge)
         db.session.commit()
-        
-        # At this exact moment, challenge.id is available 
-        print("New challenge ID:", challenge.id)
 
-        # Manual serialization
-        return {
-            "success": True,
-            "data": serialize_challenge(challenge)
-        }
-
-
-
+        return {"success": True, "data": serialize_challenge(challenge)}
 
     @staticmethod
     def read(challenge):
         return serialize_challenge(challenge)
-
 
     @staticmethod
     def update(challenge, request):
@@ -58,19 +49,12 @@ class K8sChallenge(BaseChallenge):
         challenge.description = data["description"]
         challenge.value = data["value"]
         challenge.category = data["category"]
-
-        # Update custom field
         challenge.template = data.get("template")
-
         db.session.commit()
-        return {
-            "success": True,
-            "data": serialize_challenge(challenge)
-        }
 
+        return {"success": True, "data": serialize_challenge(challenge)}
 
     @staticmethod
     def delete(challenge):
         db.session.delete(challenge)
         db.session.commit()
-
