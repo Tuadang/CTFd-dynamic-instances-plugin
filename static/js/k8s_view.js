@@ -1,69 +1,37 @@
-CTFd._internal.challenge = {
-    data: {},
+CTFd._internal.challenge.data = undefined;
 
-    preRender: function () {
-        // Called before the modal renders
-        return Promise.resolve();
-    },
+// TODO: Remove in CTFd v4.0
+CTFd._internal.challenge.renderer = null;
 
-    render: function (challenge) {
-        // Save challenge data for later use
-        CTFd._internal.challenge.data = challenge;
-        return Promise.resolve();
-    },
+CTFd._internal.challenge.preRender = function() {};
 
-    postRender: function () {
-        // Attach your custom button handlers
-        const startBtn = document.getElementById("start-instance");
-        const stopBtn = document.getElementById("stop-instance");
-        const statusBtn = document.getElementById("status-instance");
+// TODO: Remove in CTFd v4.0
+CTFd._internal.challenge.render = null;
 
-        if (startBtn) startBtn.onclick = CTFd._internal.challenge.startInstance;
-        if (stopBtn) stopBtn.onclick = CTFd._internal.challenge.stopInstance;
-        if (statusBtn) statusBtn.onclick = CTFd._internal.challenge.statusInstance;
+CTFd._internal.challenge.postRender = function() {};
 
-        return Promise.resolve();
-    },
+CTFd._internal.challenge.submit = function(preview) {
+  var challenge_id = parseInt(CTFd.lib.$("#challenge-id").val());
+  var submission = CTFd.lib.$("#challenge-input").val();
 
-    startInstance: function () {
-        const id = CTFd._internal.challenge.data.id;
+  var body = {
+    challenge_id: challenge_id,
+    submission: submission
+  };
+  var params = {};
+  if (preview) {
+    params["preview"] = true;
+  }
 
-        fetch(`/plugins/dynamic_instances/${id}/start`, {
-            method: "POST",
-            credentials: "same-origin"
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById("instance-info").textContent =
-                JSON.stringify(data, null, 2);
-        });
-    },
-
-    stopInstance: function () {
-        const id = CTFd._internal.challenge.data.id;
-
-        fetch(`/plugins/dynamic_instances/${id}/stop`, {
-            method: "POST",
-            credentials: "same-origin"
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById("instance-info").textContent =
-                JSON.stringify(data, null, 2);
-        });
-    },
-
-    statusInstance: function () {
-        const id = CTFd._internal.challenge.data.id;
-
-        fetch(`/plugins/dynamic_instances/${id}/status`, {
-            method: "GET",
-            credentials: "same-origin"
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById("instance-info").textContent =
-                JSON.stringify(data, null, 2);
-        });
+  return CTFd.api.post_challenge_attempt(params, body).then(function(response) {
+    if (response.status === 429) {
+      // User was ratelimited but process response
+      return response;
     }
+    if (response.status === 403) {
+      // User is not logged in or CTF is paused.
+      return response;
+    }
+    return response;
+  });
 };
