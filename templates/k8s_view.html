@@ -1,56 +1,62 @@
 {% extends "challenge.html" %}
 
 {% block description %}
-<p>{{ challenge.description }}</p>
+<span class="challenge-desc">
+  {{ challenge.description | safe }}
+</span>
 {% endblock %}
 
 {% block input %}
 <div class="challenge-view">
 
-    {# ---- REQUIRED DEFAULT CTFd INPUTS ---- #}
+  <!-- REQUIRED: challenge id -->
+  <input
+    id="challenge-id"
+    class="challenge-id"
+    type="hidden"
+    value="{{ challenge.id }}"
+  >
 
-    <input
-        id="challenge-id"
-        class="challenge-id"
-        type="hidden"
-        value="{{ challenge.id }}"
-    >
+  <!-- REQUIRED: flag input (can be hidden if you want) -->
+  <input
+    id="challenge-input"
+    class="challenge-input form-control d-none"
+    type="text"
+    name="submission"
+    placeholder="Flag"
+    x-model="submission"
+  >
 
-    <input
-        id="challenge-input"
-        class="challenge-input form-control d-none"
-        type="text"
-        name="submission"
-        placeholder="Flag"
-        x-model="submission"
-    >
+  <!-- REQUIRED: challenge type -->
+  <input
+    type="hidden"
+    id="challenge-type"
+    value="{{ challenge.type }}"
+  >
 
-    {# ---- YOUR CUSTOM INSTANCE UI ---- #}
+  <!-- Your custom K8s controls -->
+  <div class="btn-group mb-3" role="group">
+    <button type="button" class="btn btn-primary" id="start-instance">
+      Start Instance
+    </button>
+    <button type="button" class="btn btn-danger" id="stop-instance">
+      Stop Instance
+    </button>
+    <button type="button" class="btn btn-info" id="status-instance">
+      Check Status
+    </button>
+  </div>
 
-    <input type="hidden" id="challenge-type" value="{{ challenge.type }}">
-
-    <div class="btn-group mb-3">
-        <button class="btn btn-primary" id="start-instance">
-            Start Instance
-        </button>
-        <button class="btn btn-danger" id="stop-instance">
-            Stop Instance
-        </button>
-        <button class="btn btn-info" id="status-instance">
-            Check Status
-        </button>
-    </div>
-
-    <pre
-        id="instance-info"
-        class="border rounded p-2 bg-dark text-light"
-        style="min-height: 6rem;"
-    ></pre>
+  <pre
+    id="instance-info"
+    class="border rounded p-2 bg-dark text-light"
+    style="min-height: 6rem;"
+  ></pre>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('plugins.k8s_challenges.static', filename='js/k8s_view.js') }}"></script>
+<script src="{{ url_for('static', filename='js/k8s_view.js') }}"></script>
 {% endblock %}
