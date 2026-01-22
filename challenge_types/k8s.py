@@ -5,7 +5,7 @@ from ..utils import serialize_challenge
 
 class K8sChallenge(BaseChallenge):
     id = "k8s"
-    name = "Kubernetes Challenge"
+    name = "k8s"
 
     templates = {
         "create": "/plugins/dynamic_instances/templates/k8s_create.html",
@@ -39,9 +39,38 @@ class K8sChallenge(BaseChallenge):
         return {"success": True, "data": serialize_challenge(challenge)}
 
     @staticmethod
-    def read(challenge):
-        # ✅ Let CTFd handle serialization
-        return {"success": True}
+    def read(cls, challenge):
+        """
+        This method is in used to access the data of a challenge in a format processable by the front end.
+
+        :param challenge:
+        :return: Challenge object, data dictionary to be returned to the user
+        """
+        data = {
+            "id": challenge.id,
+            "name": challenge.name,
+            "value": challenge.value,
+            "description": challenge.description,
+            "attribution": challenge.attribution,
+            "connection_info": challenge.connection_info,
+            "next_id": challenge.next_id,
+            "category": challenge.category,
+            "state": challenge.state,
+            "max_attempts": challenge.max_attempts,
+            "logic": challenge.logic,
+            "initial": challenge.initial if challenge.function != "static" else None,
+            "decay": challenge.decay if challenge.function != "static" else None,
+            "minimum": challenge.minimum if challenge.function != "static" else None,
+            "function": challenge.function,
+            "type": challenge.type,
+            "type_data": {
+                "id": cls.id,
+                "name": cls.name,
+                "templates": cls.templates,
+                "scripts": cls.scripts,
+            },
+        }
+        return data
 
     @staticmethod
     def update(challenge, request):
