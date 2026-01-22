@@ -40,7 +40,8 @@ class K8sChallenge(BaseChallenge):
 
     @staticmethod
     def read(challenge):
-        return serialize_challenge(challenge)
+        # ✅ Let CTFd handle serialization
+        return {"success": True}
 
     @staticmethod
     def update(challenge, request):
