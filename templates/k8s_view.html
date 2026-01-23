@@ -7,13 +7,17 @@
 {% endblock %}
 
 {% block input %}
-  <!-- Instance Control (CTFd-style section) -->
-    <h5 class="text-uppercase fw-bold mb-3">
-      <i class="fas fa-server me-2"></i>Instance Control
+<div class="row g-4">
+
+  <!-- LEFT: Instance Control -->
+  <div class="col-md-6">
+
+    <h6 class="text-uppercase fw-bold mb-3">
+      <i class="fas fa-server me-2"></i> Instance Control
       <span id="instance-status-badge" class="ms-2">
         <span class="badge bg-danger">Offline</span>
       </span>
-    </h5>
+    </h6>
 
     <div class="d-flex gap-2 mb-3">
       <button id="start-instance" class="btn btn-success flex-grow-1">
@@ -29,14 +33,16 @@
       </button>
     </div>
 
-    <label class="form-label small text-muted text-uppercase fw-bold">Connection Info</label>
+    <label class="form-label small text-muted fw-bold text-uppercase">
+      Connection Info
+    </label>
 
-    <div class="input-group mb-1">
-      <input 
-        type="text" 
-        id="instance-connection" 
-        class="form-control font-monospace" 
-        value="Instance not started..." 
+    <div class="input-group mb-2">
+      <input
+        type="text"
+        id="instance-connection"
+        class="form-control font-monospace"
+        value="Instance not started..."
         readonly
       >
       <button class="btn btn-outline-secondary" type="button" onclick="copyConnection()">
@@ -45,34 +51,46 @@
     </div>
 
     <div id="instance-timer" class="small text-muted"></div>
+  </div>
 
-  <!-- Submit Flag (CTFd native) -->
-  <!-- <div class="mt-4">
-    <h5 class="text-uppercase fw-bold mb-3">Submit Flag</h5>
+  <!-- RIGHT: Flag Submission (CTFd native) -->
+  <div class="col-md-6">
 
-    <form id="flag-submit-form">
-      <input 
-        id="challenge-input"
-        class="challenge-input form-control form-control-lg mb-3"
-        type="text"
-        name="submission"
-        placeholder="CTF{flag_here}"
-        required
-      >
+    <!-- REQUIRED by CTFd -->
+    <input
+      type="hidden"
+      id="challenge-id"
+      class="challenge-id"
+      value="{{ challenge.id }}"
+    >
 
-      <button id="challenge-submit" class="challenge-submit btn btn-primary w-100 btn-lg" type="submit">
-        Submit
-      </button>
-    </form>
-  </div> -->
+    <label class="form-label fw-bold">Flag</label>
+    <input
+      id="challenge-input"
+      class="challenge-input form-control"
+      type="text"
+      name="submission"
+      placeholder="CTF{...}"
+      autocomplete="off"
+    >
+
+    <button
+      id="challenge-submit"
+      class="challenge-submit btn btn-outline-secondary w-100 mt-3"
+      type="submit"
+      @click.debounce.500ms="submitChallenge()"
+    >
+      Submit
+    </button>
+
+  </div>
+</div>
 
 <script>
 function copyConnection() {
   const input = document.getElementById("instance-connection");
   if (!input.value.includes("not started")) {
-    input.select();
     navigator.clipboard.writeText(input.value);
-    alert("Connection string copied!");
   }
 }
 </script>
