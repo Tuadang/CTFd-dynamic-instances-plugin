@@ -1,119 +1,145 @@
+console.log("[k8s] k8s_view.js loaded");
+
 (function () {
-    // Ensure CTFd challenge system exists
-    if (!CTFd || !CTFd._internal || !CTFd._internal.challenge) {
-        console.error("CTFd challenge system not found");
-        return;
+  "use strict";
+
+  // REQUIRED: challenge metadata object
+  CTFd._internal.challenge.data = {};
+  CTFd._internal.challenge.renderer = "vm";
+
+  // REQUIRED: must exist or CTFd crashes
+  CTFd._internal.challenge.preRender = function () {
+  };
+
+  // REQUIRED: legacy, still must exist
+  CTFd._internal.challenge.render = function () {
+  };
+
+  // Called AFTER modal HTML is injected
+  CTFd._internal.challenge.postRender = function () {
+    initVMs();
+  };
+
+  // We don’t submit flags for k8s
+  CTFd._internal.challenge.submit = function () {
+    return Promise.resolve();
+  };
+
+  function waitForElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const start = Date.now();
+      const timer = setInterval(() => {
+        const el = document.querySelector(selector);
+        if (el) {
+          clearInterval(timer);
+          resolve(el);
+        } else if (Date.now() - start > timeout) {
+          clearInterval(timer);
+          reject();
+        }
+      }, 100);
+    });
+  }
+
+  async function initVMs() {
+
+    try {
+      await waitForElement(".challenge-view");
+    } catch {
+      console.warn("[vm] .challenge-view not found");
+      return;
     }
 
-    // Extend the existing challenge handler (DO NOT overwrite)
-    CTFd._internal.challenge = {
-        ...CTFd._internal.challenge,
+    const challengeId = document.getElementById("challenge-id")?.value;
+    const output = document.getElementById("instance-info");
+    const startBtn = document.getElementById("start-instance");
+    const stopBtn = document.getElementById("stop-instance");
+    const statusBtn = document.getElementById("status-instance");
+    let instanceId = null;
 
-        data: {},
+    if (!challengeId || !output) {
+      console.warn("[vm] missing elements");
+      return;
+    }
 
-        /**
-         * Called before the modal is rendered
-         */
-        preRender: function () {
-            return Promise.resolve();
+    function log(msg) {
+      output.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      output.scrollTop = output.scrollHeight;
+    }
+
+    async function api(endpoint, payload = {}) {
+      const res = await fetch(`/plugins/dynamic_instances/vm/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CSRF-Token": CTFd.config.csrfNonce,
         },
+        body: JSON.stringify({
+          challenge_id: challengeId,
+          instance_id: instanceId,
+          ...payload,
+        }),
+      });
 
-        /**
-         * Called with challenge data from API
-         */
-        render: function (challenge) {
-            this.data = challenge;
-            return Promise.resolve();
-        },
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
-        /**
-         * Called after modal HTML is in the DOM
-         */
-        postRender: function () {
-            const bind = (id, handler) => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener("click", handler.bind(this));
-                }
-            };
+      return res.json();
+    }
 
-            bind("start-instance", this.startInstance);
-            bind("stop-instance", this.stopInstance);
-            bind("status-instance", this.statusInstance);
+    function updateUI(data) {
+      const connInput = document.getElementById("instance-connection");
+      const statusBadge = document.getElementById("instance-status-badge");
+      const connection = data.connection_string || (data.ip && data.port ? `nc ${data.ip} ${data.port}` : data.ip) || "Instance not started...";
 
-            return Promise.resolve();
-        },
+      if (data.instance_id) instanceId = data.instance_id;
 
-        /**
-         * Start a per-user instance
-         */
-        startInstance: function () {
-            if (!this.data?.id) return;
+      if (data.status === "running") {
+        connInput.value = connection;
+        statusBadge.innerHTML = '<span class="badge bg-success">Online</span>';
+      } else {
+        connInput.value = connection || "Instance not started...";
+        statusBadge.innerHTML = '<span class="badge bg-danger">Offline</span>';
+      }
+    }
 
-            fetch(`/plugins/dynamic_instances/${this.data.id}/start`, {
-                method: "POST",
-                credentials: "same-origin",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            })
-                .then(r => r.json())
-                .then(data => {
-                    const info = document.getElementById("instance-info");
-                    if (info) {
-                        info.textContent = JSON.stringify(data, null, 2);
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                });
-        },
+    startBtn?.addEventListener("click", async () => {
+      console.log("[VM] Start clicked");
+      output.textContent = "";
+      log("Starting instance...");
+      try {
+        const data = await api("start");
+        updateUI(data);
+        log(`Instance ${data.instance_id || ""} started`);
+        if (data.ip) log(`IP: ${data.ip}`);
+        if (data.port) log(`Port: ${data.port}`);
+      } catch (e) {
+        log(`Error: ${e.message}`);
+      }
+    });
 
-        /**
-         * Stop the user instance
-         */
-        stopInstance: function () {
-            if (!this.data?.id) return;
+    stopBtn?.addEventListener("click", async () => {
+      log("Stopping instance...");
+      try {
+        const data = await api("stop");
+        updateUI({ ...data, status: "stopped", connection_string: "Instance not started..." });
+        log("Instance stopped");
+      } catch (e) {
+        log(`Error: ${e.message}`);
+      }
+    });
 
-            fetch(`/plugins/dynamic_instances/${this.data.id}/stop`, {
-                method: "POST",
-                credentials: "same-origin",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            })
-                .then(r => r.json())
-                .then(data => {
-                    const info = document.getElementById("instance-info");
-                    if (info) {
-                        info.textContent = JSON.stringify(data, null, 2);
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                });
-        },
-
-        /**
-         * Get instance status
-         */
-        statusInstance: function () {
-            if (!this.data?.id) return;
-
-            fetch(`/plugins/dynamic_instances/${this.data.id}/status`, {
-                method: "GET",
-                credentials: "same-origin"
-            })
-                .then(r => r.json())
-                .then(data => {
-                    const info = document.getElementById("instance-info");
-                    if (info) {
-                        info.textContent = JSON.stringify(data, null, 2);
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                });
-        }
-    };
+    statusBtn?.addEventListener("click", async () => {
+      log("Checking status...");
+      try {
+        const data = await api("status");
+        updateUI(data);
+        log(`Status: ${data.status}`);
+        if (data.ip) log(`IP: ${data.ip}`);
+      } catch (e) {
+        log(`Error: ${e.message}`);
+      }
+    });
+  }
 })();

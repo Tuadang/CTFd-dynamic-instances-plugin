@@ -59,6 +59,7 @@ console.log("[k8s] k8s_view.js loaded");
     const startBtn = document.getElementById("start-instance");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
+    let instanceId = null;
 
     if (!challengeId || !output) {
       console.warn("[k8s] missing elements");
@@ -70,14 +71,18 @@ console.log("[k8s] k8s_view.js loaded");
       output.scrollTop = output.scrollHeight;
     }
 
-    async function api(endpoint, method = "POST") {
-      const res = await fetch(`/api/v1/k8s/${endpoint}`, {
-        method,
+    async function api(endpoint, payload = {}) {
+      const res = await fetch(`/plugins/dynamic_instances/k8s/${endpoint}`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           "CSRF-Token": CTFd.config.csrfNonce,
         },
-        body: method === "GET" ? null : JSON.stringify({ challenge_id: challengeId }),
+        body: JSON.stringify({
+          challenge_id: challengeId,
+          instance_id: instanceId,
+          ...payload,
+        }),
       });
 
       if (!res.ok) {
@@ -87,18 +92,20 @@ console.log("[k8s] k8s_view.js loaded");
       return res.json();
     }
 
-    // Example of what your JS update logic might look like
     function updateUI(data) {
-        const connInput = document.getElementById('instance-connection');
-        const statusBadge = document.getElementById('instance-status-badge');
+      const connInput = document.getElementById("instance-connection");
+      const statusBadge = document.getElementById("instance-status-badge");
+      const connection = data.connection_string || (data.ip && data.port ? `nc ${data.ip} ${data.port}` : data.ip) || "Instance not started...";
 
-        if (data.status === 'running') {
-            connInput.value = data.connection_string; // e.g. "nc 10.10.10.10 1337"
-            statusBadge.innerHTML = '<span class="badge bg-success">Online</span>';
-        } else {
-            connInput.value = "Instance not started...";
-            statusBadge.innerHTML = '<span class="badge bg-danger">Offline</span>';
-        }
+      if (data.instance_id) instanceId = data.instance_id;
+
+      if (data.status === "running") {
+        connInput.value = connection;
+        statusBadge.innerHTML = '<span class="badge bg-success">Online</span>';
+      } else {
+        connInput.value = connection || "Instance not started...";
+        statusBadge.innerHTML = '<span class="badge bg-danger">Offline</span>';
+      }
     }
 
     startBtn?.addEventListener("click", async () => {
@@ -107,7 +114,8 @@ console.log("[k8s] k8s_view.js loaded");
       log("Starting instance...");
       try {
         const data = await api("start");
-        log("Instance started");
+        updateUI(data);
+        log(`Instance ${data.instance_id || ""} started`);
         if (data.ip) log(`IP: ${data.ip}`);
         if (data.port) log(`Port: ${data.port}`);
       } catch (e) {
@@ -118,7 +126,8 @@ console.log("[k8s] k8s_view.js loaded");
     stopBtn?.addEventListener("click", async () => {
       log("Stopping instance...");
       try {
-        await api("stop");
+        const data = await api("stop");
+        updateUI({ ...data, status: "stopped", connection_string: "Instance not started..." });
         log("Instance stopped");
       } catch (e) {
         log(`Error: ${e.message}`);
@@ -128,7 +137,8 @@ console.log("[k8s] k8s_view.js loaded");
     statusBtn?.addEventListener("click", async () => {
       log("Checking status...");
       try {
-        const data = await api("status", "GET");
+        const data = await api("status");
+        updateUI(data);
         log(`Status: ${data.status}`);
         if (data.ip) log(`IP: ${data.ip}`);
       } catch (e) {
