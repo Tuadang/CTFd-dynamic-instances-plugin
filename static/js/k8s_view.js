@@ -55,7 +55,7 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     const challengeId = document.getElementById("challenge-id")?.value;
-    const output = document.getElementById("instance-info");
+    const output = document.getElementById("instance-log");
     const startBtn = document.getElementById("start-instance");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
