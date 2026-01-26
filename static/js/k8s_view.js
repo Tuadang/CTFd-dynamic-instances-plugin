@@ -4,7 +4,7 @@ console.log("[k8s] k8s_view.js loaded");
   "use strict";
 
   // REQUIRED: challenge metadata object
-  CTFd._internal.challenge.data = {};
+  CTFd._internal.challenge.data = { instance_info: null };
   CTFd._internal.challenge.renderer = "k8s";
 
   // REQUIRED: must exist or CTFd crashes
@@ -48,7 +48,7 @@ console.log("[k8s] k8s_view.js loaded");
     console.log("[k8s] initK8s()");
 
     try {
-      await waitForElement(".challenge-view");
+      await waitForElement("#challenge");
     } catch {
       console.warn("[k8s] .challenge-view not found");
       return;

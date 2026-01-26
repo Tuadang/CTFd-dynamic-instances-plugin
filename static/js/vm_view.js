@@ -4,7 +4,7 @@ console.log("[k8s] k8s_view.js loaded");
   "use strict";
 
   // REQUIRED: challenge metadata object
-  CTFd._internal.challenge.data = {};
+  CTFd._internal.challenge.data = { instance_info: null };
   CTFd._internal.challenge.renderer = "vm";
 
   // REQUIRED: must exist or CTFd crashes
@@ -44,7 +44,7 @@ console.log("[k8s] k8s_view.js loaded");
   async function initVMs() {
 
     try {
-      await waitForElement(".challenge-view");
+      await waitForElement("#challenge");
     } catch {
       console.warn("[vm] .challenge-view not found");
       return;
