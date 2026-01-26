@@ -4,7 +4,7 @@ console.log("[k8s] k8s_view.js loaded");
   "use strict";
 
   // REQUIRED: challenge metadata object
-  CTFd._internal.challenge.data = { instance_info: null };
+  CTFd._internal.challenge.data = {};
   CTFd._internal.challenge.renderer = "vm";
 
   // REQUIRED: must exist or CTFd crashes
@@ -44,14 +44,14 @@ console.log("[k8s] k8s_view.js loaded");
   async function initVMs() {
 
     try {
-      await waitForElement("#challenge");
+      await waitForElement(".challenge-view");
     } catch {
       console.warn("[vm] .challenge-view not found");
       return;
     }
 
     const challengeId = document.getElementById("challenge-id")?.value;
-    const output = document.getElementById("instance-log");
+    const output = document.getElementById("instance-info");
     const startBtn = document.getElementById("start-instance");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
@@ -68,7 +68,7 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`/vm/${endpoint}`, {
+      const res = await fetch(`/plugins/dynamic_instances/vm/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

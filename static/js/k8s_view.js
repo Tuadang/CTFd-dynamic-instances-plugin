@@ -55,7 +55,7 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     const challengeId = document.getElementById("challenge-id")?.value;
-    const output = document.getElementById("instance-log");
+    const output = document.getElementById("instance-info");
     const startBtn = document.getElementById("start-instance");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
@@ -72,7 +72,7 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`/k8s/${endpoint}`, {
+      const res = await fetch(`/plugins/dynamic_instances/k8s/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
