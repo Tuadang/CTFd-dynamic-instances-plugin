@@ -1,5 +1,3 @@
-console.log("[k8s] k8s_view.js loaded");
-
 (function () {
   "use strict";
 
@@ -9,17 +7,14 @@ console.log("[k8s] k8s_view.js loaded");
 
   // REQUIRED: must exist or CTFd crashes
   CTFd._internal.challenge.preRender = function () {
-    console.log("[k8s] preRender()");
   };
 
   // REQUIRED: legacy, still must exist
   CTFd._internal.challenge.render = function () {
-    console.log("[k8s] render()");
   };
 
   // Called AFTER modal HTML is injected
   CTFd._internal.challenge.postRender = function () {
-    console.log("[k8s] postRender()");
     initK8s();
   };
 
@@ -45,12 +40,10 @@ console.log("[k8s] k8s_view.js loaded");
   }
 
   async function initK8s() {
-    console.log("[k8s] initK8s()");
 
     try {
       await waitForElement("#challenge");
     } catch {
-      console.warn("[k8s] .challenge-view not found");
       return;
     }
 
@@ -62,7 +55,6 @@ console.log("[k8s] k8s_view.js loaded");
     let instanceId = null;
 
     if (!challengeId || !output) {
-      console.warn("[k8s] missing elements");
       return;
     }
 
@@ -117,7 +109,6 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     startBtn?.addEventListener("click", async () => {
-      console.log("[k8s] Start clicked");
       output.textContent = "";
       log("Starting instance...");
       try {

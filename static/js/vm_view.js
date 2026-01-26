@@ -1,5 +1,3 @@
-console.log("[k8s] k8s_view.js loaded");
-
 (function () {
   "use strict";
 
@@ -46,7 +44,6 @@ console.log("[k8s] k8s_view.js loaded");
     try {
       await waitForElement("#challenge");
     } catch {
-      console.warn("[vm] .challenge-view not found");
       return;
     }
 
@@ -58,7 +55,6 @@ console.log("[k8s] k8s_view.js loaded");
     let instanceId = null;
 
     if (!challengeId || !output) {
-      console.warn("[vm] missing elements");
       return;
     }
 
@@ -113,7 +109,6 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     startBtn?.addEventListener("click", async () => {
-      console.log("[VM] Start clicked");
       output.textContent = "";
       log("Starting instance...");
       try {
