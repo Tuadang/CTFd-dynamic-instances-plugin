@@ -72,7 +72,7 @@ console.log("[k8s] k8s_view.js loaded");
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`/plugins/dynamic_instances/k8s/${endpoint}`, {
+      const res = await fetch(`/k8s/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
