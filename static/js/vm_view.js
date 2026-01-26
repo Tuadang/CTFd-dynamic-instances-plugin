@@ -81,11 +81,19 @@ console.log("[k8s] k8s_view.js loaded");
         }),
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        // If no JSON, keep generic message
       }
 
-      return res.json();
+      if (!res.ok) {
+        const msg = data.message || `HTTP ${res.status}`;
+        throw new Error(msg);
+      }
+
+      return data;
     }
 
     function updateUI(data) {

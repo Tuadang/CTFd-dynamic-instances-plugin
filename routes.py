@@ -78,10 +78,12 @@ def load_routes(app):
             "type": "k8s",
         })
 
-    @bp.route("/k8s/status", methods=["POST"])
+    @bp.route("/k8s/status", methods=["GET", "POST"])
     def k8s_status():
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or request.args.to_dict() or {}
         cfg = _settings("K8S")
+        if not cfg["base"]:
+            return jsonify({"status": "error", "message": "K8S_API_BASE is not configured"}), 500
         try:
             svc_resp = _call_service(cfg["base"], "status", data, token=cfg["token"])
         except Exception as exc:
@@ -132,10 +134,12 @@ def load_routes(app):
             "type": "vm",
         })
 
-    @bp.route("/vm/status", methods=["POST"])
+    @bp.route("/vm/status", methods=["GET", "POST"])
     def vm_status():
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or request.args.to_dict() or {}
         cfg = _settings("PROXMOX")
+        if not cfg["base"]:
+            return jsonify({"status": "error", "message": "PROXMOX_API_BASE is not configured"}), 500
         try:
             svc_resp = _call_service(cfg["base"], "status", data, token=cfg["token"])
         except Exception as exc:
