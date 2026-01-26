@@ -2,7 +2,6 @@ from CTFd.plugins import register_plugin_assets_directory
 from CTFd.plugins.challenges import CHALLENGE_CLASSES
 from .challenge_types.k8s import K8sChallenge
 from .challenge_types.vm import VMChallenge
-from .routes import load_routes
 
 def load(app):
     # Register challenge types
