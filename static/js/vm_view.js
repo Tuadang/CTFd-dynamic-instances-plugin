@@ -48,13 +48,20 @@
     }
 
     const challengeId = document.getElementById("challenge-id")?.value;
-    const output = document.getElementById("instance-info");
+    const output = document.getElementById("instance-log");
     const startBtn = document.getElementById("start-instance");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
+    const apiBase = (window.DYNAMIC_INSTANCES_API_BASE || "").replace(/\/$/, "");
+    const vmBase = apiBase ? `${apiBase}/vm` : "";
     let instanceId = null;
 
     if (!challengeId || !output) {
+      return;
+    }
+
+    if (!vmBase) {
+      output.textContent = "[error] API base URL not configured (set window.DYNAMIC_INSTANCES_API_BASE)";
       return;
     }
 
@@ -64,7 +71,7 @@
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`/plugins/dynamic_instances/vm/${endpoint}`, {
+      const res = await fetch(`${vmBase}/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -52,9 +52,16 @@
     const startBtn = document.getElementById("start-instance");
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
+    const apiBase = (window.DYNAMIC_INSTANCES_API_BASE || "").replace(/\/$/, "");
+    const k8sBase = apiBase ? `${apiBase}/k8s` : "";
     let instanceId = null;
 
     if (!challengeId || !output) {
+      return;
+    }
+
+    if (!k8sBase) {
+      output.textContent = "[error] API base URL not configured (set window.DYNAMIC_INSTANCES_API_BASE)";
       return;
     }
 
@@ -64,7 +71,7 @@
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`/plugins/dynamic_instances/k8s/${endpoint}`, {
+      const res = await fetch(`${k8sBase}/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
