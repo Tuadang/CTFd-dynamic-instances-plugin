@@ -179,7 +179,7 @@
                 <label class="form-label mt-2" for="instance-log">Instance Log</label>
                 <textarea id="instance-log" class="form-control mb-2" rows="5" readonly placeholder="Instance output will appear here..."></textarea>
 
-                <template x-if="instance_info">
+                <template x-if="typeof instance_info !== 'undefined' && instance_info">
                   <div class="alert alert-info text-center mt-3" role="alert" x-html="instance_info"></div>
                 </template>
               </div>
