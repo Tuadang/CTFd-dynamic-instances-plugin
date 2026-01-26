@@ -8,8 +8,5 @@ def load(app):
     CHALLENGE_CLASSES["k8s"] = K8sChallenge
     CHALLENGE_CLASSES["vm"] = VMChallenge
 
-    # Register routes
-    load_routes(app)
-
     # Register static assets (JS/CSS)
     register_plugin_assets_directory(app, base_path="/plugins/dynamic_instances/static")
