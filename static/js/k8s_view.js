@@ -1,8 +1,9 @@
 (function () {
   "use strict";
 
-  // REQUIRED: challenge metadata object
-  CTFd._internal.challenge.data = { instance_info: null };
+  // REQUIRED: challenge metadata object. Preserve any existing data from CTFd.
+  const existing = CTFd._internal.challenge.data || {};
+  CTFd._internal.challenge.data = { ...existing, instance_info: existing.instance_info ?? null };
   CTFd._internal.challenge.renderer = "k8s";
 
   // REQUIRED: must exist or CTFd crashes
@@ -53,7 +54,7 @@
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
 
-    const k8sBase = "http://172.16.0.132:5000";
+    const k8sBase = ("http://172.16.0.132:5000").replace(/\/$/, "");
     const defaultImage = window.DYNAMIC_INSTANCES_K8S_IMAGE;
     const defaultTag = window.DYNAMIC_INSTANCES_K8S_TAG;
     const defaultPort = window.DYNAMIC_INSTANCES_K8S_PORT;
@@ -105,7 +106,7 @@
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`$http://172.16.0.132:5000/${endpoint}`, {
+      const res = await fetch(`${k8sBase}/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
