@@ -23,6 +23,9 @@ class K8sChallenge(BaseChallenge):
     def create(request):
         data = request.get_json()
 
+        if not data.get("template"):
+            return {"success": False, "errors": ["Image is required"]}, 400
+
         challenge = Challenges(
             name=data["name"],
             description=data["description"],
@@ -82,6 +85,8 @@ class K8sChallenge(BaseChallenge):
     @staticmethod
     def update(challenge, request):
         data = request.get_json()
+        if "template" in data and not data.get("template"):
+            return {"success": False, "errors": ["Image is required"]}, 400
         if "name" in data:
             challenge.name = data["name"]
         if "description" in data:
