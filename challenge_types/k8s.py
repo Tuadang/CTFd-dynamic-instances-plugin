@@ -22,8 +22,9 @@ class K8sChallenge(BaseChallenge):
     @staticmethod
     def create(request):
         data = request.get_json()
+        image = data.get("template")
 
-        if not data.get("template"):
+        if not image:
             return {"success": False, "errors": ["Image is required"]}, 400
 
         challenge = Challenges(
@@ -33,8 +34,9 @@ class K8sChallenge(BaseChallenge):
             category=data["category"],
             type="k8s",
         )
-
-        challenge.template = data.get("template")
+        # Persist image in connection_info (built-in column) and mirror on template for compatibility
+        challenge.connection_info = image
+        challenge.template = image
 
         db.session.add(challenge)
         db.session.commit()
@@ -52,7 +54,10 @@ class K8sChallenge(BaseChallenge):
         # Accept either model instance or dict (CTFd may pass a dict in some flows)
         if isinstance(challenge, dict):
             base = dict(challenge)
+            image = base.get("template") or base.get("connection_info")
+            base["template"] = image
         else:
+            image = getattr(challenge, "template", None) or getattr(challenge, "connection_info", None)
             base = {
                 "id": challenge.id,
                 "name": challenge.name,
@@ -69,7 +74,7 @@ class K8sChallenge(BaseChallenge):
                 "decay": challenge.decay if challenge.function != "static" else None,
                 "minimum": challenge.minimum if challenge.function != "static" else None,
                 "function": challenge.function,
-                "template": getattr(challenge, "template", None),
+                "template": image,
                 "type": challenge.type,
             }
 
@@ -96,7 +101,9 @@ class K8sChallenge(BaseChallenge):
         if "category" in data:
             challenge.category = data["category"]
         if "template" in data:
-            challenge.template = data.get("template")
+            image = data.get("template")
+            challenge.template = image
+            challenge.connection_info = image
         db.session.commit()
         return K8sChallenge.read(challenge)
 
