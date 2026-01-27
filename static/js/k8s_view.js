@@ -53,7 +53,7 @@
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
 
-    const k8sBase = (window.DYNAMIC_INSTANCES_K8S_API_BASE || window.DYNAMIC_INSTANCES_API_BASE || "").replace(/\/$/, "");
+    const k8sBase = "http://172.16.0.132:5000";
     const defaultImage = window.DYNAMIC_INSTANCES_K8S_IMAGE;
     const defaultTag = window.DYNAMIC_INSTANCES_K8S_TAG;
     const defaultPort = window.DYNAMIC_INSTANCES_K8S_PORT;
