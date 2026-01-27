@@ -46,31 +46,38 @@ class K8sChallenge(BaseChallenge):
         :param challenge:
         :return: Challenge object, data dictionary to be returned to the user
         """
-        data = {
-            "id": challenge.id,
-            "name": challenge.name,
-            "value": challenge.value,
-            "description": challenge.description,
-            "attribution": challenge.attribution,
-            "connection_info": challenge.connection_info,
-            "next_id": challenge.next_id,
-            "category": challenge.category,
-            "state": challenge.state,
-            "max_attempts": challenge.max_attempts,
-            "logic": challenge.logic,
-            "initial": challenge.initial if challenge.function != "static" else None,
-            "decay": challenge.decay if challenge.function != "static" else None,
-            "minimum": challenge.minimum if challenge.function != "static" else None,
-            "function": challenge.function,
-            "type": challenge.type,
-            "type_data": {
-                "id": cls.id,
-                "name": cls.name,
-                "templates": cls.templates,
-                "scripts": cls.scripts,
-            },
+        # Accept either model instance or dict (CTFd may pass a dict in some flows)
+        if isinstance(challenge, dict):
+            base = dict(challenge)
+        else:
+            base = {
+                "id": challenge.id,
+                "name": challenge.name,
+                "value": challenge.value,
+                "description": challenge.description,
+                "attribution": challenge.attribution,
+                "connection_info": challenge.connection_info,
+                "next_id": challenge.next_id,
+                "category": challenge.category,
+                "state": challenge.state,
+                "max_attempts": challenge.max_attempts,
+                "logic": challenge.logic,
+                "initial": challenge.initial if challenge.function != "static" else None,
+                "decay": challenge.decay if challenge.function != "static" else None,
+                "minimum": challenge.minimum if challenge.function != "static" else None,
+                "function": challenge.function,
+                "template": getattr(challenge, "template", None),
+                "type": challenge.type,
+            }
+
+        base["type_data"] = {
+            "id": cls.id,
+            "name": cls.name,
+            "templates": cls.templates,
+            "scripts": cls.scripts,
         }
-        return data
+
+        return base
 
     @staticmethod
     def update(challenge, request):
