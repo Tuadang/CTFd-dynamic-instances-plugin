@@ -40,6 +40,22 @@
     });
   }
 
+  async function loadCurrentUser() {
+    const internalUser = (window.CTFd && window.CTFd._internal && window.CTFd._internal.user) ? window.CTFd._internal.user : null;
+    if (internalUser && internalUser.id) {
+      return internalUser;
+    }
+
+    try {
+      const res = await fetch("/api/v1/users/me", { credentials: "same-origin" });
+      if (!res.ok) return {};
+      const body = await res.json();
+      return body && body.data ? body.data : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
   async function initK8s() {
 
     try {
@@ -54,11 +70,14 @@
     const stopBtn = document.getElementById("stop-instance");
     const statusBtn = document.getElementById("status-instance");
 
-    const k8sBase = ("http://localhost:5000").replace(/\/$/, "");
+    const k8sBase = ("http://192.168.1.12:5000").replace(/\/$/, "");
     const defaultImage = window.DYNAMIC_INSTANCES_K8S_IMAGE;
     const defaultTag = window.DYNAMIC_INSTANCES_K8S_TAG;
     const defaultPort = window.DYNAMIC_INSTANCES_K8S_PORT;
-    const currentUser = (window.CTFd && window.CTFd._internal && window.CTFd._internal.user) ? window.CTFd._internal.user : {};
+    const userInfo = await loadCurrentUser();
+    const userIdentifier = userInfo.name || userInfo.username || userInfo.email || userInfo.id || "user";
+    const userId = userInfo.id || null;
+    const teamId = userInfo.team_id || null;
     let instanceId = null;
 
     if (!challengeId || !output) {
@@ -100,7 +119,7 @@
       const portVal = resolveValue("port");
 
       const port = portVal ? parseInt(portVal, 10) : undefined;
-      const user = currentUser.name || currentUser.id || "user";
+      const user = userIdentifier;
 
       return { image, tag, port, user };
     }
@@ -115,10 +134,8 @@
         body: JSON.stringify({
           challenge_id: challengeId,
           instance_id: instanceId,
-          user_id: currentUser.id,
-          user_name: currentUser.name,
-          team_id: currentUser.team_id,
-          user: currentUser.name || currentUser.id,
+          user_id: userId,
+          user_name: userIdentifier,
           ...payload,
         }),
       });
