@@ -105,7 +105,7 @@
     }
 
     async function api(endpoint, payload = {}) {
-      const res = await fetch(`${k8sBase}/${endpoint}`, {
+      const res = await fetch(`$http://172.16.0.132:5000/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
