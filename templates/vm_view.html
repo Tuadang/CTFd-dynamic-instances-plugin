@@ -1,3 +1,4 @@
+<script src="/plugins/dynamic_instances/static/js/dynamic_instances_config.js"></script>
 <div :class="getStyles()" role="document" x-data="(() => { Challenge.instance_info = Challenge.instance_info ?? null; return Challenge; })()" x-init='id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}; ratingValue = {{ (rating.get('value') if rating else None) | tojson }}; ratingReview = {{ (rating.get('review', '') if rating else None) | tojson }};'>
   <div class="modal-content">
     <div class="modal-body py-4 px-4 px-sm-5">
