@@ -54,6 +54,7 @@
     const statusBtn = document.getElementById("status-instance");
     const apiBase = (window.DYNAMIC_INSTANCES_API_BASE || "").replace(/\/$/, "");
     const k8sBase = apiBase ? `${apiBase}/k8s` : "";
+    const currentUser = (window.CTFd && window.CTFd._internal && window.CTFd._internal.user) ? window.CTFd._internal.user : {};
     let instanceId = null;
 
     if (!challengeId || !output) {
@@ -80,6 +81,9 @@
         body: JSON.stringify({
           challenge_id: challengeId,
           instance_id: instanceId,
+          user_id: currentUser.id,
+          user_name: currentUser.name,
+          team_id: currentUser.team_id,
           ...payload,
         }),
       });
