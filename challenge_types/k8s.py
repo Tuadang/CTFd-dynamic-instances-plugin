@@ -35,8 +35,7 @@ class K8sChallenge(BaseChallenge):
 
         db.session.add(challenge)
         db.session.commit()
-
-        return {"success": True, "data": serialize_challenge(challenge)}
+        return {"success": True, "data": K8sChallenge.read(challenge)}
 
     @classmethod
     def read(cls, challenge):
@@ -88,8 +87,7 @@ class K8sChallenge(BaseChallenge):
         challenge.category = data["category"]
         challenge.template = data.get("template")
         db.session.commit()
-
-        return {"success": True, "data": serialize_challenge(challenge)}
+        return {"success": True, "data": K8sChallenge.read(challenge)}
 
     @staticmethod
     def delete(challenge):
