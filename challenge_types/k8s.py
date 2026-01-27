@@ -82,11 +82,16 @@ class K8sChallenge(BaseChallenge):
     @staticmethod
     def update(challenge, request):
         data = request.get_json()
-        challenge.name = data["name"]
-        challenge.description = data["description"]
-        challenge.value = data["value"]
-        challenge.category = data["category"]
-        challenge.template = data.get("template")
+        if "name" in data:
+            challenge.name = data["name"]
+        if "description" in data:
+            challenge.description = data["description"]
+        if "value" in data:
+            challenge.value = data["value"]
+        if "category" in data:
+            challenge.category = data["category"]
+        if "template" in data:
+            challenge.template = data.get("template")
         db.session.commit()
         return K8sChallenge.read(challenge)
 
