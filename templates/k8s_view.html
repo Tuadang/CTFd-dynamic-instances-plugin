@@ -88,22 +88,6 @@
 
             <span class="challenge-desc">{% block description %}{{ challenge.html }}{% endblock %}</span>
 
-            {% if challenge.connection_info %}
-              <div class="mb-2">
-                <span class="challenge-connection-info">
-                  {% block connection_info %}
-                    {% set conn = challenge.connection_info %}
-                    {% if not conn %}
-                    {% elif conn.startswith("http") %}
-                      {{ conn | urlize(target="_blank") }}
-                    {% else %}
-                      <code>{{ conn }}</code>
-                    {% endif %}
-                  {% endblock %}
-                </span>
-              </div>
-            {% endif %}
-
             {% if hints %}
               <div class="challenge-hints hint-row row">
                 <div class="col-12 mb-3">
@@ -158,7 +142,9 @@
 
             <div class="row instance-row">
               <div class="col-12">
-                <input id="challenge-image" type="hidden" value="{{ challenge.template or challenge.connection_info }}" data-challenge-image="{{ challenge.template or challenge.connection_info }}">
+                <input id="challenge-image" type="hidden" value="{{ challenge.image or '' }}" data-challenge-image="{{ challenge.image or '' }}">
+                <input id="challenge-tag" type="hidden" value="{{ challenge.tag or '' }}" data-challenge-tag="{{ challenge.tag or '' }}">
+                <input id="challenge-port" type="hidden" value="{{ challenge.port or '' }}" data-challenge-port="{{ challenge.port or '' }}">
                 <div class="d-flex justify-content-center flex-wrap gap-2 mb-4">
                   <button id="start-instance" class="btn btn-success px-4">
                     <i class="fas fa-play"></i> Start Instance

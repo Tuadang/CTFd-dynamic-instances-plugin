@@ -65,20 +65,26 @@
     }
 
     const challengeId = document.getElementById("challenge-id")?.value;
-    const output = document.getElementById("instance-log");
-    const startBtn = document.getElementById("start-instance");
-    const stopBtn = document.getElementById("stop-instance");
-    const statusBtn = document.getElementById("status-instance");
-
-    const k8sBase = ("http://192.168.1.212:5000").replace(/\/$/, "");
-    const defaultImage = window.DYNAMIC_INSTANCES_K8S_IMAGE;
-    const defaultTag = window.DYNAMIC_INSTANCES_K8S_TAG;
-    const defaultPort = window.DYNAMIC_INSTANCES_K8S_PORT;
-    const userInfo = await loadCurrentUser();
-    const userIdentifier = userInfo.name || userInfo.username || userInfo.email || userInfo.id || "user";
-    const userId = userInfo.id || null;
-    const teamId = userInfo.team_id || null;
-    let instanceId = null;
+      const startBtn = document.getElementById("start-instance");
+      const stopBtn = document.getElementById("stop-instance");
+      const statusBtn = document.getElementById("status-instance");
+      const output = document.getElementById("instance-log");
+      const k8sBase = ("https://api.banaantje.be").replace(/\/$/, "");
+      const defaultImage = window.DYNAMIC_INSTANCES_K8S_IMAGE;
+      const defaultTag = window.DYNAMIC_INSTANCES_K8S_TAG;
+      const defaultPort = window.DYNAMIC_INSTANCES_K8S_PORT;
+      const userInfo = await loadCurrentUser();
+      const userIdentifier = userInfo.name || userInfo.username || userInfo.email || userInfo.id || "user";
+      const userId = userInfo.id || null;
+      const teamId = userInfo.team_id || null;
+      const keySuffix = `${challengeId}-${userId || "anon"}`;
+      const instanceKey = `k8s-instance-${keySuffix}`;
+      const stateKey = `k8s-state-${keySuffix}`;
+      const logKey = `k8s-log-${keySuffix}`;
+      let instanceId = localStorage.getItem(instanceKey) || null;
+      let readyPollTimer = null;
+      let heartbeatTimer = null;
+      let busy = false;
 
     if (!challengeId || !output) {
       return;
@@ -92,6 +98,13 @@
     function log(msg) {
       output.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
       output.scrollTop = output.scrollHeight;
+      localStorage.setItem(logKey, output.textContent);
+    }
+
+    function syncButtons(running = false) {
+      if (startBtn) startBtn.disabled = busy || running;
+      if (stopBtn) stopBtn.disabled = busy || !instanceId;
+      if (statusBtn) statusBtn.disabled = busy;
     }
 
     function resolveValue(key) {
@@ -160,7 +173,10 @@
       const statusBadge = document.getElementById("instance-status-badge");
       const connection = data.connection_string || (data.ip && data.port ? `nc ${data.ip} ${data.port}` : data.ip) || "Instance not started...";
 
-      if (data.instance_id) instanceId = data.instance_id;
+      if (data.instance_id) {
+        instanceId = data.instance_id;
+        localStorage.setItem(instanceKey, instanceId);
+      }
 
       if (data.status === "running") {
         connInput.value = connection;
@@ -169,16 +185,127 @@
         connInput.value = connection || "Instance not started...";
         statusBadge.innerHTML = '<span class="badge bg-danger">Offline</span>';
       }
+
+      localStorage.setItem(stateKey, JSON.stringify({
+        instanceId,
+        status: data.status,
+        connection,
+        timestamp: Date.now(),
+      }));
+
+      const hasConnection = Boolean(data.connection_string || data.ip);
+      syncButtons(data.status === "running");
+      return hasConnection;
     }
 
+    function clearTimers() {
+      if (readyPollTimer) {
+        clearInterval(readyPollTimer);
+        readyPollTimer = null;
+      }
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+    }
+
+    // Restore saved log on load per challenge/user
+    const savedLog = localStorage.getItem(logKey);
+    if (savedLog) {
+      output.textContent = savedLog;
+      output.scrollTop = output.scrollHeight;
+    }
+
+    // Restore saved UI state on load per challenge/user
+    const savedStateRaw = localStorage.getItem(stateKey);
+    let initialRunning = false;
+    if (savedStateRaw) {
+      try {
+        const saved = JSON.parse(savedStateRaw);
+        if (saved) {
+          const connInput = document.getElementById("instance-connection");
+          const statusBadge = document.getElementById("instance-status-badge");
+          if (saved.instanceId) instanceId = saved.instanceId;
+          if (saved.connection) connInput.value = saved.connection;
+          if (saved.status === "running") {
+            statusBadge.innerHTML = '<span class="badge bg-success">Online</span>';
+            initialRunning = true;
+          } else if (saved.status) {
+            statusBadge.innerHTML = '<span class="badge bg-danger">Offline</span>';
+          }
+        }
+      } catch (e) {
+        // ignore malformed state
+      }
+    }
+
+    syncButtons(initialRunning);
+
+    function startHeartbeat() {
+      if (heartbeatTimer) return;
+      heartbeatTimer = setInterval(() => {
+        statusBtn?.click();
+      }, 180000); // every 3 minutes
+    }
+
+    function startReadyPoll() {
+      clearTimers();
+      readyPollTimer = setInterval(async () => {
+        try {
+          const data = await api("status");
+          const ready = updateUI(data);
+          if (ready) {
+            clearInterval(readyPollTimer);
+            readyPollTimer = null;
+            startHeartbeat();
+          }
+        } catch (e) {
+          log(`Error: ${e.message}`);
+        }
+      }, 5000);
+    }
+
+    // Try to attach to an existing instance on load
+    (async () => {
+      try {
+        if (!instanceId) return;
+        const data = await api("status");
+        const ready = updateUI(data);
+        if (data.instance_id) instanceId = data.instance_id;
+        if (ready) {
+          startHeartbeat();
+        }
+      } catch (e) {
+        // Status may 404 if no instance; ignore
+      }
+    })();
+
     startBtn?.addEventListener("click", async () => {
-      output.textContent = "";
       log("Starting instance...");
+      busy = true;
+      syncButtons(true);
       const startPayload = buildStartPayload();
 
       if (!startPayload.image) {
         log("Error: image not configured for this challenge");
         return;
+      }
+
+      // Check if an instance already exists before starting a new one
+      try {
+        if (instanceId) {
+          const existing = await api("status");
+          const ready = updateUI(existing);
+          if (existing.instance_id) instanceId = existing.instance_id;
+          if (ready) {
+            startHeartbeat();
+            busy = false;
+            syncButtons(existing.status === "running");
+            return;
+          }
+        }
+      } catch (e) {
+        // If status fails, proceed to start
       }
       
       try {
@@ -187,31 +314,62 @@
         log(`Instance ${data.instance_id || ""} started`);
         if (data.ip) log(`IP: ${data.ip}`);
         if (data.port) log(`Port: ${data.port}`);
+        startReadyPoll();
       } catch (e) {
         log(`Error: ${e.message}`);
+      } finally {
+        busy = false;
+        syncButtons(false);
       }
     });
 
     stopBtn?.addEventListener("click", async () => {
+      if (!instanceId) {
+        log("No instance to stop yet.");
+        return;
+      }
+
       log("Stopping instance...");
+      busy = true;
+      syncButtons(false);
+      clearTimers();
+      const currentId = instanceId;
+
       try {
-        const data = await api("stop");
+        const data = await api("stop", { instance_id: currentId });
         updateUI({ ...data, status: "stopped", connection_string: "Instance not started..." });
         log("Instance stopped");
+        if (data.errors) log(`Warnings: ${JSON.stringify(data.errors)}`);
+        instanceId = null;
+        localStorage.removeItem(instanceKey);
+        localStorage.removeItem(stateKey);
       } catch (e) {
         log(`Error: ${e.message}`);
+      } finally {
+        busy = false;
+        syncButtons(false);
       }
     });
 
     statusBtn?.addEventListener("click", async () => {
       log("Checking status...");
+      busy = true;
+      syncButtons(false);
       try {
+        if (!instanceId) {
+          log("No instance to check yet.");
+          return;
+        }
         const data = await api("status");
-        updateUI(data);
+        const ready = updateUI(data);
         log(`Status: ${data.status}`);
         if (data.ip) log(`IP: ${data.ip}`);
+        if (ready && !heartbeatTimer) startHeartbeat();
       } catch (e) {
         log(`Error: ${e.message}`);
+      } finally {
+        busy = false;
+        syncButtons(false);
       }
     });
   }

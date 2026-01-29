@@ -1,7 +1,72 @@
+import json
+
 from CTFd.plugins.challenges import BaseChallenge
 from CTFd.models import db, Challenges
 from CTFd.utils.user import get_current_user
 from ..utils import serialize_challenge
+
+
+def _parse_port(value):
+    try:
+        if value is None:
+            return None
+        if isinstance(value, str) and value.strip() == "":
+            return None
+        port = int(value)
+        if 1 <= port <= 65535:
+            return port
+    except (TypeError, ValueError):
+        return None
+    return None
+
+
+def _pack_connection_info(image, tag, port):
+    # Store both values so older deployments that used connection_info for image keep working.
+    payload = {"image": image, "tag": tag, "port": port}
+    try:
+        return json.dumps(payload)
+    except Exception:
+        return image
+
+
+def _unpack_connection_info(raw):
+    image = None
+    port = None
+    tag = None
+
+    if isinstance(raw, str):
+        # Try JSON first
+        try:
+            obj = json.loads(raw)
+            if isinstance(obj, dict):
+                image = obj.get("image")
+                port = _parse_port(obj.get("port"))
+                tag = obj.get("tag")
+        except Exception:
+            # Legacy: raw was just the image string
+            if _parse_port(raw) is None:
+                image, tag = _split_image_tag(raw)
+            else:
+                port = _parse_port(raw)
+    elif isinstance(raw, dict):
+        image = raw.get("image")
+        port = _parse_port(raw.get("port"))
+        tag = raw.get("tag")
+
+    return image, tag, port
+
+
+def _split_image_tag(image_str):
+    if not image_str:
+        return None, None
+    if "://" in image_str:
+        return image_str, None
+    last_slash = image_str.rfind("/")
+    last_colon = image_str.rfind(":")
+    if last_colon > last_slash:
+        return image_str[:last_colon], image_str[last_colon + 1 :]
+    return image_str, None
+
 
 class K8sChallenge(BaseChallenge):
     id = "k8s"
@@ -22,9 +87,11 @@ class K8sChallenge(BaseChallenge):
     @staticmethod
     def create(request):
         data = request.get_json()
-        image = data.get("template")
+        image_input = data.get("template")
+        image, tag = _split_image_tag(image_input)
+        port = _parse_port(data.get("port"))
 
-        if not image:
+        if not image_input:
             return {"success": False, "errors": ["Image is required"]}, 400
 
         challenge = Challenges(
@@ -34,9 +101,9 @@ class K8sChallenge(BaseChallenge):
             category=data["category"],
             type="k8s",
         )
-        # Persist image in connection_info (built-in column) and mirror on template for compatibility
-        challenge.connection_info = image
-        challenge.template = image
+        challenge.connection_info = _pack_connection_info(image, tag, port)
+        if hasattr(challenge, "template"):
+            challenge.template = image_input
 
         db.session.add(challenge)
         db.session.commit()
@@ -54,17 +121,35 @@ class K8sChallenge(BaseChallenge):
         # Accept either model instance or dict (CTFd may pass a dict in some flows)
         if isinstance(challenge, dict):
             base = dict(challenge)
-            image = base.get("template") or base.get("connection_info")
-            base["template"] = image
+            conn_raw = base.get("connection_info")
+            image, tag, port = _unpack_connection_info(conn_raw)
+            # Prefer template if explicitly set
+            template_input = base.get("template")
+            if template_input:
+                image, tag = _split_image_tag(template_input)
+            template_display = template_input or (f"{image}:{tag}" if image and tag else image)
+            base["template"] = template_display
+            base["image"] = image
+            base["tag"] = tag
+            base["port"] = port
+            base["connection_info"] = None
         else:
-            image = getattr(challenge, "template", None) or getattr(challenge, "connection_info", None)
+            conn_raw = getattr(challenge, "connection_info", None)
+            tpl = getattr(challenge, "template", None) if hasattr(challenge, "template") else None
+            image, tag, port = _unpack_connection_info(conn_raw)
+            if tpl:
+                tpl_image, tpl_tag = _split_image_tag(tpl)
+                image = tpl_image
+                if tpl_tag:
+                    tag = tpl_tag
+            template_display = tpl or (f"{image}:{tag}" if image and tag else image)
             base = {
                 "id": challenge.id,
                 "name": challenge.name,
                 "value": challenge.value,
                 "description": challenge.description,
                 "attribution": challenge.attribution,
-                "connection_info": challenge.connection_info,
+                "connection_info": None,
                 "next_id": challenge.next_id,
                 "category": challenge.category,
                 "state": challenge.state,
@@ -74,7 +159,10 @@ class K8sChallenge(BaseChallenge):
                 "decay": challenge.decay if challenge.function != "static" else None,
                 "minimum": challenge.minimum if challenge.function != "static" else None,
                 "function": challenge.function,
-                "template": image,
+                "template": template_display,
+                "image": image,
+                "tag": tag,
+                "port": port,
                 "type": challenge.type,
             }
 
@@ -101,9 +189,23 @@ class K8sChallenge(BaseChallenge):
         if "category" in data:
             challenge.category = data["category"]
         if "template" in data:
-            image = data.get("template")
-            challenge.template = image
-            challenge.connection_info = image
+            image_input = data.get("template")
+            image, tag = _split_image_tag(image_input)
+            if hasattr(challenge, "template"):
+                challenge.template = image_input
+        if "port" in data:
+            port = _parse_port(data.get("port"))
+        else:
+            port = None
+
+        # Always keep both in connection_info for compatibility
+        current_image, current_tag, existing_port = _unpack_connection_info(challenge.connection_info)
+        if "template" in data:
+            current_image, current_tag = _split_image_tag(image_input)
+        if "port" in data:
+            existing_port = port
+
+        challenge.connection_info = _pack_connection_info(current_image, current_tag, existing_port)
         db.session.commit()
         return K8sChallenge.read(challenge)
 
