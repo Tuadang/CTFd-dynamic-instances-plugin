@@ -1,4 +1,5 @@
 <script src="/plugins/dynamic_instances/static/js/dynamic_instances_config.js"></script>
+<script src="/plugins/dynamic_instances/static/js/k8s_view.js"></script>
 <div :class="getStyles()" role="document" x-data="(() => { Challenge.instance_info = Challenge.instance_info ?? null; return Challenge; })()" x-init='id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}; ratingValue = {{ (rating.get('value') if rating else None) | tojson }}; ratingReview = {{ (rating.get('review', '') if rating else None) | tojson }};'>
   <div class="modal-content">
     <div class="modal-body py-4 px-4 px-sm-5">
@@ -152,16 +153,13 @@
                   <button id="stop-instance" class="btn btn-danger px-4" style="display: none;">
                     <i class="fas fa-stop"></i> Stop Instance
                   </button>
-                  <button id="status-instance" class="btn btn-outline-secondary px-4">
-                    <i class="fas fa-info-circle"></i> Check Status
-                  </button>
                 </div>
 
                 <div class="text-center mb-3" id="instance-status-badge"></div>
 
                 <div class="input-group mb-3">
-                  <span class="input-group-text">Connection</span>
-                  <input id="instance-connection" class="form-control" type="text" value="Instance not started..." readonly>
+                  <span id="instance-connection-status" class="input-group-text text-danger">Unavailable</span>
+                  <span id="instance-connection-info" class="form-control text-muted">Not available</span>
                 </div>
 
                 <template x-if="typeof instance_info !== 'undefined' && instance_info">

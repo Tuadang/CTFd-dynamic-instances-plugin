@@ -4,6 +4,7 @@ from CTFd.plugins.challenges import BaseChallenge
 from CTFd.models import db, Challenges
 from CTFd.utils.user import get_current_user
 from ..utils import serialize_challenge
+from ..models import K8sChallengeConfig
 
 
 def _parse_port(value):
@@ -68,6 +69,10 @@ def _split_image_tag(image_str):
     return image_str, None
 
 
+def _get_config(challenge_id):
+    return K8sChallengeConfig.query.filter_by(challenge_id=challenge_id).first()
+
+
 class K8sChallenge(BaseChallenge):
     id = "k8s"
     name = "k8s"
@@ -101,11 +106,19 @@ class K8sChallenge(BaseChallenge):
             category=data["category"],
             type="k8s",
         )
-        challenge.connection_info = _pack_connection_info(image, tag, port)
         if hasattr(challenge, "template"):
             challenge.template = image_input
 
         db.session.add(challenge)
+        db.session.commit()
+
+        config = K8sChallengeConfig(
+            challenge_id=challenge.id,
+            image=image,
+            tag=tag,
+            port=port,
+        )
+        db.session.add(config)
         db.session.commit()
         # Return plain data; CTFd API wrapper will add success/data envelope
         return K8sChallenge.read(challenge)
@@ -121,8 +134,15 @@ class K8sChallenge(BaseChallenge):
         # Accept either model instance or dict (CTFd may pass a dict in some flows)
         if isinstance(challenge, dict):
             base = dict(challenge)
-            conn_raw = base.get("connection_info")
-            image, tag, port = _unpack_connection_info(conn_raw)
+            config = None
+            challenge_id = base.get("id")
+            if challenge_id:
+                config = _get_config(challenge_id)
+            if config:
+                image, tag, port = config.image, config.tag, config.port
+            else:
+                conn_raw = base.get("connection_info")
+                image, tag, port = _unpack_connection_info(conn_raw)
             # Prefer template if explicitly set
             template_input = base.get("template")
             if template_input:
@@ -134,9 +154,13 @@ class K8sChallenge(BaseChallenge):
             base["port"] = port
             base["connection_info"] = None
         else:
-            conn_raw = getattr(challenge, "connection_info", None)
+            config = _get_config(challenge.id)
+            if config:
+                image, tag, port = config.image, config.tag, config.port
+            else:
+                conn_raw = getattr(challenge, "connection_info", None)
+                image, tag, port = _unpack_connection_info(conn_raw)
             tpl = getattr(challenge, "template", None) if hasattr(challenge, "template") else None
-            image, tag, port = _unpack_connection_info(conn_raw)
             if tpl:
                 tpl_image, tpl_tag = _split_image_tag(tpl)
                 image = tpl_image
@@ -188,6 +212,7 @@ class K8sChallenge(BaseChallenge):
             challenge.value = data["value"]
         if "category" in data:
             challenge.category = data["category"]
+        image_input = None
         if "template" in data:
             image_input = data.get("template")
             image, tag = _split_image_tag(image_input)
@@ -198,18 +223,22 @@ class K8sChallenge(BaseChallenge):
         else:
             port = None
 
-        # Always keep both in connection_info for compatibility
-        current_image, current_tag, existing_port = _unpack_connection_info(challenge.connection_info)
-        if "template" in data:
-            current_image, current_tag = _split_image_tag(image_input)
-        if "port" in data:
-            existing_port = port
+        config = _get_config(challenge.id)
+        if not config:
+            config = K8sChallengeConfig(challenge_id=challenge.id)
+            db.session.add(config)
 
-        challenge.connection_info = _pack_connection_info(current_image, current_tag, existing_port)
+        if image_input is not None:
+            config.image, config.tag = _split_image_tag(image_input)
+        if "port" in data:
+            config.port = port
         db.session.commit()
         return K8sChallenge.read(challenge)
 
     @staticmethod
     def delete(challenge):
+        config = _get_config(challenge.id)
+        if config:
+            db.session.delete(config)
         db.session.delete(challenge)
         db.session.commit()
