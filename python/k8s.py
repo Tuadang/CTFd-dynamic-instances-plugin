@@ -93,10 +93,16 @@ class K8sChallenge(BaseChallenge):
     def create(request):
         data = request.get_json()
         image_input = data.get("template")
-        image, tag = _split_image_tag(image_input)
+        image = data.get("image")
+        tag = data.get("tag")
         port = _parse_port(data.get("port"))
 
-        if not image_input:
+        if image_input:
+            image, tag = _split_image_tag(image_input)
+        elif image:
+            image_input = f"{image}:{tag}" if tag else image
+
+        if not image:
             return {"success": False, "errors": ["Image is required"]}, 400
 
         challenge = Challenges(
@@ -213,11 +219,16 @@ class K8sChallenge(BaseChallenge):
         if "category" in data:
             challenge.category = data["category"]
         image_input = None
+        image = data.get("image")
+        tag = data.get("tag")
         if "template" in data:
             image_input = data.get("template")
             image, tag = _split_image_tag(image_input)
-            if hasattr(challenge, "template"):
-                challenge.template = image_input
+        elif image:
+            image_input = f"{image}:{tag}" if tag else image
+
+        if image_input and hasattr(challenge, "template"):
+            challenge.template = image_input
         if "port" in data:
             port = _parse_port(data.get("port"))
         else:
@@ -230,6 +241,11 @@ class K8sChallenge(BaseChallenge):
 
         if image_input is not None:
             config.image, config.tag = _split_image_tag(image_input)
+        else:
+            if image is not None:
+                config.image = image
+            if tag is not None:
+                config.tag = tag
         if "port" in data:
             config.port = port
         db.session.commit()
