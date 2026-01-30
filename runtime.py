@@ -23,7 +23,7 @@ def _load():
 
 
 def _ns():
-    return os.getenv("K8S_NAMESPACE", "dynamic-instances")
+    return os.getenv("K8S_NAMESPACE", "per-user")
 
 
 def _name(user_id, challenge_id):

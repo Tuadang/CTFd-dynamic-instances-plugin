@@ -80,11 +80,15 @@
     const connBadge = document.getElementById("instance-connection-status");
     const connInfo = document.getElementById("instance-connection-info");
 
-    if (data.status === "running") {
+    const status = data.status || data.pod_phase || "unknown";
+    const isRunning = status === "running" || status === "Running";
+    const isCreating = status === "starting" || status === "pending" || status === "Pending" || status === "creating";
+
+    if (isRunning) {
       el.innerHTML = `
         <div>
           <strong>Status:</strong> running<br>
-          <code>${data.connection || ""}</code>
+          <code>${data.connection || data.ip || ""}</code>
         </div>
       `;
       if (connBadge) {
@@ -93,12 +97,24 @@
         connBadge.classList.add("text-success");
       }
       if (connInfo) {
-        connInfo.textContent = data.connection || data.url || "Available";
+        connInfo.textContent = data.connection || data.url || data.ip || "Available";
         connInfo.classList.remove("text-muted");
         connInfo.classList.add("text-success");
       }
+    } else if (isCreating) {
+      el.innerHTML = `<div><strong>Status:</strong> creating</div>`;
+      if (connBadge) {
+        connBadge.textContent = "Creating";
+        connBadge.classList.remove("text-success", "text-danger");
+        connBadge.classList.add("text-warning");
+      }
+      if (connInfo) {
+        connInfo.textContent = "Starting...";
+        connInfo.classList.remove("text-success", "text-danger");
+        connInfo.classList.add("text-muted");
+      }
     } else {
-      el.innerHTML = `<div><strong>Status:</strong> ${data.status}</div>`;
+      el.innerHTML = `<div><strong>Status:</strong> ${status}</div>`;
       if (connBadge) {
         connBadge.textContent = "Unavailable";
         connBadge.classList.remove("text-success");
@@ -138,7 +154,7 @@
       challenge_id: challengeId(),
     });
     instanceId = data.instance_id;
-    updateStatus(data);
+    updateStatus({ ...data, status: data.status || "creating" });
     startPolling();
   }
 
