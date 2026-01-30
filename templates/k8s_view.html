@@ -146,10 +146,10 @@
                 <input id="challenge-tag" type="hidden" value="{{ challenge.tag or '' }}" data-challenge-tag="{{ challenge.tag or '' }}">
                 <input id="challenge-port" type="hidden" value="{{ challenge.port or '' }}" data-challenge-port="{{ challenge.port or '' }}">
                 <div class="d-flex justify-content-center flex-wrap gap-2 mb-4">
-                  <button id="start-instance" class="btn btn-success px-4">
+                  <button id="start-instance" class="btn btn-success px-4" style="display: inline-block;">
                     <i class="fas fa-play"></i> Start Instance
                   </button>
-                  <button id="stop-instance" class="btn btn-outline-danger px-4">
+                  <button id="stop-instance" class="btn btn-danger px-4" style="display: none;">
                     <i class="fas fa-stop"></i> Stop Instance
                   </button>
                   <button id="status-instance" class="btn btn-outline-secondary px-4">
@@ -163,9 +163,6 @@
                   <span class="input-group-text">Connection</span>
                   <input id="instance-connection" class="form-control" type="text" value="Instance not started..." readonly>
                 </div>
-
-                <label class="form-label mt-2" for="instance-log">Instance Log</label>
-                <textarea id="instance-log" class="form-control mb-2" rows="5" readonly placeholder="Instance output will appear here..."></textarea>
 
                 <template x-if="typeof instance_info !== 'undefined' && instance_info">
                   <div class="alert alert-info text-center mt-3" role="alert" x-html="instance_info"></div>
@@ -378,3 +375,22 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const startBtn = document.getElementById('start-instance');
+  const stopBtn = document.getElementById('stop-instance');
+  
+  if (startBtn && stopBtn) {
+    startBtn.addEventListener('click', function() {
+      startBtn.style.display = 'none';
+      stopBtn.style.display = 'inline-block';
+    });
+    
+    stopBtn.addEventListener('click', function() {
+      stopBtn.style.display = 'none';
+      startBtn.style.display = 'inline-block';
+    });
+  }
+});
+</script>
