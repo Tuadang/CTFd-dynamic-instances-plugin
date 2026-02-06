@@ -80,6 +80,12 @@ K8S_IMAGE_PULL_SECRETS=gitlab-registry
 
 The UI shows the connection endpoint and TTL. Click **Stop Instance** to clean up.
 
+## Tested use cases
+
+- Basic Node.js web apps
+- Nginx serving static HTML
+- Privilege-escalation training container (SSH-based)
+
 ## Notes
 
 - Instances are created as Kubernetes Deployments and Services, labeled by user and challenge.
