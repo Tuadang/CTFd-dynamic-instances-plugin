@@ -159,6 +159,8 @@
     const status = data.status || data.pod_phase || "unknown";
     const isRunning = status === "running" || status === "Running";
     const isCreating = status === "starting" || status === "pending" || status === "Pending" || status === "creating";
+    const ttlRemaining = typeof data.ttl_remaining === "number" ? data.ttl_remaining : null;
+    const ttlMax = typeof data.ttl_max === "number" ? data.ttl_max : null;
 
     if (isRunning) {
       el.innerHTML = "";
@@ -184,6 +186,9 @@
       if (ttlEl) {
         renderTtl(ttlEl, data);
       }
+      if (extendBtn) {
+        extendBtn.disabled = ttlMax !== null && ttlRemaining !== null && ttlRemaining >= ttlMax;
+      }
     } else if (isCreating) {
       el.innerHTML = "";
       setButtons(true);
@@ -200,6 +205,9 @@
       if (ttlEl) {
         renderTtl(ttlEl, data);
       }
+      if (extendBtn) {
+        extendBtn.disabled = ttlMax !== null && ttlRemaining !== null && ttlRemaining >= ttlMax;
+      }
     } else {
       el.innerHTML = "";
       setButtons(false);
@@ -215,6 +223,9 @@
       }
       if (ttlEl) {
         ttlEl.textContent = "";
+      }
+      if (extendBtn) {
+        extendBtn.disabled = true;
       }
     }
   }

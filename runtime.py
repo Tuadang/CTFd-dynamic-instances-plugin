@@ -87,7 +87,7 @@ def _ttl_seconds():
 def _ttl_max_seconds():
     """Maximum cap for total lifetime."""
     try:
-        value = int(os.getenv("K8S_TTL_MAX_SECONDS", "0"))
+        value = int(os.getenv("K8S_TTL_MAX_SECONDS", "3600"))
         return value if value > 0 else None
     except (TypeError, ValueError):
         return None
@@ -162,6 +162,9 @@ def start_instance(*, user_id, challenge_id, image, tag=None, port=80):
     if ttl:
         response["expires_at"] = int(now) + ttl
         response["ttl_remaining"] = ttl
+    if ttl_max and response.get("ttl_remaining"):
+        response["ttl_remaining"] = min(response["ttl_remaining"], ttl_max)
+        response["ttl_max"] = ttl_max
     return response
 
 
@@ -245,18 +248,29 @@ def extend_instance(instance_id, seconds=None):
 
     dep = _apps.read_namespaced_deployment(instance_id, ns)
     annotations = (dep.metadata.annotations or {}).copy()
+    try:
+        created_at = int(annotations.get("created_at", now))
+    except (TypeError, ValueError):
+        created_at = now
     current_expires = int(annotations.get("expires_at", now))
     base = current_expires if current_expires > now else now
     new_expires = base + extend_by
     ttl_max = _ttl_max_seconds()
     if ttl_max:
-        new_expires = min(new_expires, now + ttl_max)
+        new_expires = min(new_expires, created_at + ttl_max)
     annotations["last_seen"] = str(now)
     annotations["expires_at"] = str(new_expires)
 
     patch = {"metadata": {"annotations": annotations}}
     _apps.patch_namespaced_deployment(instance_id, ns, patch)
-    return {"instance_id": instance_id, "expires_at": new_expires, "ttl_remaining": new_expires - now}
+    remaining = max(new_expires - now, 0)
+    ttl_max = _ttl_max_seconds()
+    if ttl_max:
+        remaining = min(remaining, ttl_max)
+    response = {"instance_id": instance_id, "expires_at": new_expires, "ttl_remaining": remaining}
+    if ttl_max:
+        response["ttl_max"] = ttl_max
+    return response
 
 
 def get_status(instance_id):
@@ -299,7 +313,11 @@ def get_status(instance_id):
         "pod_phase": pod.status.phase if pod else None,
         "port": (svc.spec.ports[0].port if svc and svc.spec and svc.spec.ports else None),
     }
+    ttl_max = _ttl_max_seconds()
     if expires_at_int is not None:
         response["expires_at"] = expires_at_int
-        response["ttl_remaining"] = max(expires_at_int - now, 0)
+        remaining = max(expires_at_int - now, 0)
+        response["ttl_remaining"] = min(remaining, ttl_max) if ttl_max else remaining
+        if ttl_max:
+            response["ttl_max"] = ttl_max
     return response
