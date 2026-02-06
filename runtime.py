@@ -11,6 +11,7 @@ _apps = None
 
 
 def _load():
+    """Initialize Kubernetes clients once per process."""
     global _core, _apps
     if _core and _apps:
         return
@@ -28,14 +29,29 @@ def _load():
 
 
 def _ns():
+    """Namespace for user instances."""
     return os.getenv("K8S_NAMESPACE", "per-user")
 
 
 def _name(user_id, challenge_id):
+    """Stable-ish resource name per user/challenge instance."""
     return f"ctf-u{user_id}-c{challenge_id}-{uuid.uuid4().hex[:6]}"
 
 
+def _instance_labels(user_id, challenge_id, name=None):
+    """Common labels used for lookup and cleanup."""
+    labels = {
+        "component": "user-instance",
+        "user_id": str(user_id),
+        "challenge_id": str(challenge_id),
+    }
+    if name:
+        labels["app"] = name
+    return labels
+
+
 def _image_pull_secrets():
+    """Parse imagePullSecrets from env (comma-separated)."""
     raw = os.getenv("K8S_IMAGE_PULL_SECRETS", "").strip()
     if not raw:
         return None
@@ -46,6 +62,7 @@ def _image_pull_secrets():
 
 
 def _ensure_namespace():
+    """Create namespace if it doesn't exist."""
     _load()
     ns = _ns()
     try:
@@ -59,14 +76,25 @@ def _ensure_namespace():
 
 
 def _ttl_seconds():
+    """Base TTL for new instances."""
     try:
-        value = int(os.getenv("K8S_TTL_SECONDS", "900"))
+        value = int(os.getenv("K8S_TTL_SECONDS", "1800"))
+        return value if value > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _ttl_max_seconds():
+    """Maximum cap for total lifetime."""
+    try:
+        value = int(os.getenv("K8S_TTL_MAX_SECONDS", "0"))
         return value if value > 0 else None
     except (TypeError, ValueError):
         return None
 
 
 def _extend_seconds():
+    """Default extend window."""
     try:
         value = int(os.getenv("K8S_EXTEND_SECONDS", "300"))
         return value if value > 0 else 300
@@ -75,6 +103,7 @@ def _extend_seconds():
 
 
 def start_instance(*, user_id, challenge_id, image, tag=None, port=80):
+    """Create a deployment + service for a user challenge instance."""
     _load()
     _ensure_namespace()
     ns = _ns()
@@ -82,7 +111,12 @@ def start_instance(*, user_id, challenge_id, image, tag=None, port=80):
     full_image = f"{image}:{tag}" if tag else image
     now = str(int(time.time()))
 
+    labels = _instance_labels(user_id, challenge_id, name)
+
     ttl = _ttl_seconds()
+    ttl_max = _ttl_max_seconds()
+    if ttl and ttl_max:
+        ttl = min(ttl, ttl_max)
     annotations = {"created_at": now, "last_seen": now}
     if ttl:
         annotations["expires_at"] = str(int(now) + ttl)
@@ -90,14 +124,14 @@ def start_instance(*, user_id, challenge_id, image, tag=None, port=80):
     dep = client.V1Deployment(
         metadata=client.V1ObjectMeta(
             name=name,
-            labels={"app": name, "component": "user-instance"},
+            labels=labels,
             annotations=annotations,
         ),
         spec=client.V1DeploymentSpec(
             replicas=1,
             selector=client.V1LabelSelector(match_labels={"app": name}),
             template=client.V1PodTemplateSpec(
-                metadata=client.V1ObjectMeta(labels={"app": name}),
+                metadata=client.V1ObjectMeta(labels=labels),
                 spec=client.V1PodSpec(
                     image_pull_secrets=_image_pull_secrets(),
                     containers=[
@@ -113,7 +147,7 @@ def start_instance(*, user_id, challenge_id, image, tag=None, port=80):
     )
 
     svc = client.V1Service(
-        metadata=client.V1ObjectMeta(name=name),
+        metadata=client.V1ObjectMeta(name=name, labels=labels),
         spec=client.V1ServiceSpec(
             type=os.getenv("K8S_SERVICE_TYPE", "LoadBalancer"),
             selector={"app": name},
@@ -132,6 +166,7 @@ def start_instance(*, user_id, challenge_id, image, tag=None, port=80):
 
 
 def stop_instance(instance_id):
+    """Delete deployment and service by instance id."""
     _load()
     ns = _ns()
     try:
@@ -144,7 +179,65 @@ def stop_instance(instance_id):
         pass
 
 
+def stop_instances_for(user_id, challenge_id):
+    """Delete all deployments/services for a user+challenge label set."""
+    _load()
+    ns = _ns()
+    selector = ",".join(
+        [
+            "component=user-instance",
+            f"user_id={user_id}",
+            f"challenge_id={challenge_id}",
+        ]
+    )
+    try:
+        deps = _apps.list_namespaced_deployment(ns, label_selector=selector)
+        for dep in deps.items:
+            try:
+                _apps.delete_namespaced_deployment(dep.metadata.name, ns)
+            except ApiException:
+                pass
+    except ApiException:
+        pass
+    try:
+        svcs = _core.list_namespaced_service(ns, label_selector=selector)
+        for svc in svcs.items:
+            try:
+                _core.delete_namespaced_service(svc.metadata.name, ns)
+            except ApiException:
+                pass
+    except ApiException:
+        pass
+
+
+def find_existing_instance(user_id, challenge_id):
+    """Find the newest instance for a user+challenge."""
+    _load()
+    ns = _ns()
+    selector = ",".join(
+        [
+            "component=user-instance",
+            f"user_id={user_id}",
+            f"challenge_id={challenge_id}",
+        ]
+    )
+    deployments = _apps.list_namespaced_deployment(ns, label_selector=selector)
+    if not deployments.items:
+        return None
+
+    def _created_at(dep):
+        annotations = dep.metadata.annotations or {}
+        try:
+            return int(annotations.get("created_at", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    deployments.items.sort(key=_created_at, reverse=True)
+    return deployments.items[0].metadata.name
+
+
 def extend_instance(instance_id, seconds=None):
+    """Extend TTL on an existing instance."""
     _load()
     ns = _ns()
     extend_by = seconds if seconds is not None else _extend_seconds()
@@ -155,6 +248,9 @@ def extend_instance(instance_id, seconds=None):
     current_expires = int(annotations.get("expires_at", now))
     base = current_expires if current_expires > now else now
     new_expires = base + extend_by
+    ttl_max = _ttl_max_seconds()
+    if ttl_max:
+        new_expires = min(new_expires, now + ttl_max)
     annotations["last_seen"] = str(now)
     annotations["expires_at"] = str(new_expires)
 
@@ -164,6 +260,7 @@ def extend_instance(instance_id, seconds=None):
 
 
 def get_status(instance_id):
+    """Return status, connection info, and TTL data for an instance."""
     _load()
     ns = _ns()
 
@@ -200,6 +297,7 @@ def get_status(instance_id):
         "instance_id": instance_id,
         "ip": ip,
         "pod_phase": pod.status.phase if pod else None,
+        "port": (svc.spec.ports[0].port if svc and svc.spec and svc.spec.ports else None),
     }
     if expires_at_int is not None:
         response["expires_at"] = expires_at_int

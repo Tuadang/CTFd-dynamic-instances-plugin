@@ -25,7 +25,7 @@
   CTFd._internal.challenge.postRender = function () {
     clearPolling();
     instanceId = null;
-    activeChallengeId = challengeId();
+    activeChallengeId = null;
     currentSession += 1;
     initK8sInstanceUI();
   };
@@ -40,6 +40,7 @@
    * ------------------------------------------------------------------ */
 
   let instanceId = null;
+  const instanceByChallenge = new Map();
   let pollTimer = null;
   let globalClickBound = false;
   let modalCloseBound = false;
@@ -49,43 +50,79 @@
   let activeChallengeId = null;
   let currentSession = 0;
   let modalRoot = null;
+  let startInFlight = false;
 
-  function challengeId() {
-    const root = modalRoot || document;
-    const fromInput = parseInt(root.querySelector("#challenge-id")?.value);
-    if (!Number.isNaN(fromInput)) return fromInput;
-    const fromData = parseInt(CTFd?._internal?.challenge?.data?.id);
-    if (!Number.isNaN(fromData)) return fromData;
-    const fromWindow = parseInt(window?.CHALLENGE_ID);
-    if (!Number.isNaN(fromWindow)) return fromWindow;
+  // Resolve challenge id from the modal markup (CTFd sets it in x-init).
+  function challengeId(rootOverride) {
+    const root = rootOverride || modalRoot || document;
+    const fromInit = initChallengeId(root);
+    if (!Number.isNaN(fromInit)) return fromInit;
     return null;
   }
 
+  // Prefer the currently visible modal to avoid stale ids.
+  function visibleChallengeId() {
+    const visibleDialog =
+      document.querySelector(".modal.show .modal-dialog[x-init]") ||
+      document.querySelector(".modal.in .modal-dialog[x-init]") ||
+      document.querySelector(".modal-dialog[x-init]");
+    if (visibleDialog) {
+      const fromInit = initChallengeId(visibleDialog);
+      if (!Number.isNaN(fromInit)) return fromInit;
+    }
+    return null;
+  }
+
+  // Parse `id = <number>` from Alpine x-init.
+  function initChallengeId(root) {
+    if (!(root instanceof HTMLElement)) return null;
+    const el = root.hasAttribute("x-init") ? root : root.querySelector("[x-init]");
+    const init = el?.getAttribute("x-init") || "";
+    if (!init) return null;
+    const match = init.match(/\bid\s*=\s*(\d+)\b/);
+    if (!match) return null;
+    const value = parseInt(match[1]);
+    return Number.isNaN(value) ? null : value;
+  }
+
+  // Map a clicked element to its owning modal.
+  function challengeIdForElement(el) {
+    if (!(el instanceof HTMLElement)) return getActiveChallengeId();
+    const root =
+      el.closest(".modal-dialog") ||
+      el.closest(".modal") ||
+      el.closest(".modal-content") ||
+      modalRoot ||
+      document;
+    const fromInit = initChallengeId(root);
+    if (!Number.isNaN(fromInit)) return fromInit;
+    return getActiveChallengeId();
+  }
+
+  // Fallback chain for current challenge id.
   function getActiveChallengeId() {
-    return activeChallengeId ?? challengeId();
+    return visibleChallengeId() ?? activeChallengeId ?? challengeId();
   }
 
-  function instanceKey() {
-    const id = getActiveChallengeId();
-    return id ? `dynamic_instances:${id}` : null;
-  }
-
+  // Track instance id per challenge on the client.
   function loadInstanceId() {
-    const key = instanceKey();
-    if (!key) return null;
-    return localStorage.getItem(key);
+    const id = getActiveChallengeId();
+    if (!id) return null;
+    if (instanceByChallenge.has(id)) return instanceByChallenge.get(id);
+    return null;
   }
 
   function saveInstanceId(value) {
-    const key = instanceKey();
-    if (!key) return;
+    const id = getActiveChallengeId();
+    if (!id) return;
     if (value) {
-      localStorage.setItem(key, value);
+      instanceByChallenge.set(id, value);
     } else {
-      localStorage.removeItem(key);
+      instanceByChallenge.delete(id);
     }
   }
 
+  // Small wrapper for plugin API calls.
   async function api(endpoint, method = "POST", payload = {}) {
     let url = `/plugins/dynamic_instances/dynamic/${endpoint}`;
     if (method === "GET" && payload && Object.keys(payload).length) {
@@ -110,6 +147,7 @@
     return data;
   }
 
+  // Render status, connection info, and TTL.
   function updateStatus(data) {
     const el = document.getElementById("instance-status-badge");
     if (!el) return;
@@ -131,8 +169,17 @@
         connBadge.classList.add("text-success");
       }
       if (connInfo) {
-        connInfo.textContent = data.connection || data.url || data.ip || "Available";
+        const target = data.connection || data.url || data.ip || "";
+        const port = data.port || data.service_port || data.container_port;
+        const host = target || "Available";
+        const display = port ? `${host}:${port}` : host || "Available";
+        const href = host && host !== "Available" ? buildLink(host, port) : null;
         connInfo.classList.remove("text-muted", "text-success", "text-danger", "text-warning");
+        if (href) {
+          connInfo.innerHTML = `<a href="${href}" target="_blank" rel="noopener noreferrer">${display}</a>`;
+        } else {
+          connInfo.textContent = display || "Available";
+        }
       }
       if (ttlEl) {
         renderTtl(ttlEl, data);
@@ -172,6 +219,15 @@
     }
   }
 
+  function buildLink(host, port) {
+    if (!host) return null;
+    const hasScheme = /^https?:\/\//i.test(host);
+    const base = hasScheme ? host : `http://${host}`;
+    if (!port) return base;
+    return base.includes("://") ? `${base.replace(/\/$/, "")}:${port}` : `${base}:${port}`;
+  }
+
+  // Convert TTL into a short display string.
   function renderTtl(el, data) {
     const ttlRemaining = data.ttl_remaining;
     const expiresAt = data.expires_at;
@@ -190,6 +246,7 @@
     el.textContent = "";
   }
 
+  // Poll control for the active modal.
   function clearPolling() {
     if (pollTimer) {
       clearInterval(pollTimer);
@@ -213,46 +270,113 @@
     }, 5000);
   }
 
-  async function startInstance() {
-    const data = await api("start", "POST", {
-      challenge_id: getActiveChallengeId(),
-    });
-    instanceId = data.instance_id;
-    saveInstanceId(instanceId);
-    setButtons(true);
-    updateStatus({ ...data, status: data.status || "creating" });
-    startPolling();
+  // Start lifecycle actions.
+  async function startInstance(challengeIdOverride) {
+    const challengeId = challengeIdOverride ?? getActiveChallengeId();
+    if (startInFlight || !challengeId) return;
+    if (instanceByChallenge.get(challengeId)) return;
+    startInFlight = true;
+    if (startBtn) startBtn.disabled = true;
+    try {
+      const data = await api("start", "POST", {
+        challenge_id: challengeId,
+      });
+      if (data.instance_id) {
+        instanceId = data.instance_id;
+        instanceByChallenge.set(challengeId, data.instance_id);
+        saveInstanceId(data.instance_id);
+      }
+      setButtons(true);
+      updateStatus({ ...data, status: data.status || "creating" });
+      startPolling();
+    } finally {
+      startInFlight = false;
+      if (startBtn) startBtn.disabled = false;
+    }
   }
 
-  async function stopInstance() {
-    if (!instanceId) return;
-    await api("stop", "POST", {
-      challenge_id: getActiveChallengeId(),
-      instance_id: instanceId,
-    });
-    instanceId = null;
-    saveInstanceId(null);
-    setButtons(false);
-    clearPolling();
-    updateStatus({ status: "stopped" });
+  async function stopInstance(challengeIdOverride) {
+    const challengeId = challengeIdOverride ?? getActiveChallengeId();
+    if (!challengeId) return;
+    const currentInstance = instanceByChallenge.get(challengeId) || instanceId;
+    if (!currentInstance) return;
+    startInFlight = false;
+    if (startBtn) startBtn.disabled = true;
+    try {
+      await api("stop", "POST", {
+        challenge_id: challengeId,
+        instance_id: currentInstance,
+      });
+      if (instanceId === currentInstance) instanceId = null;
+      instanceByChallenge.delete(challengeId);
+      saveInstanceId(null);
+      setButtons(false);
+      clearPolling();
+      updateStatus({ status: "stopped" });
+    } finally {
+      if (startBtn) startBtn.disabled = false;
+    }
   }
 
+  // Bind UI elements and bootstrap status.
   function initK8sInstanceUI() {
-    startBtn = document.getElementById("start-instance");
-    stopBtn = document.getElementById("stop-instance");
-    extendBtn = document.getElementById("extend-instance");
-    modalRoot = startBtn?.closest(".modal") || startBtn?.closest(".modal-content") || null;
+    modalRoot =
+      document.querySelector(".modal.show .modal-dialog[x-init]") ||
+      document.querySelector(".modal.in .modal-dialog[x-init]") ||
+      document.querySelector(".modal-dialog[x-init]") ||
+      null;
+    const scope = modalRoot || document;
+    startBtn = scope.querySelector("#start-instance");
+    stopBtn = scope.querySelector("#stop-instance");
+    extendBtn = scope.querySelector("#extend-instance");
+    if (!modalRoot && startBtn) {
+      modalRoot =
+        startBtn.closest(".modal-dialog") ||
+        startBtn.closest(".modal") ||
+        startBtn.closest(".modal-content") ||
+        null;
+    }
+    activeChallengeId = visibleChallengeId() ?? challengeId(modalRoot);
+    if (startBtn && activeChallengeId) startBtn.dataset.challengeId = String(activeChallengeId);
     if (stopBtn) stopBtn.style.display = "none";
     setButtons(false);
     bindGlobalClickHandler();
     bindModalCloseHandler();
     instanceId = loadInstanceId();
-    if (instanceId) {
-      const session = currentSession;
-      setButtons(true);
-      api("status", "GET", { challenge_id: getActiveChallengeId(), instance_id: instanceId })
+    const session = currentSession;
+    const runStatusCheck = () => {
+      if (session !== currentSession) return;
+      const challengeId = getActiveChallengeId();
+      if (!challengeId) {
+        setTimeout(runStatusCheck, 150);
+        return;
+      }
+      const statusPayload = { challenge_id: challengeId };
+      const currentInstance = instanceByChallenge.get(challengeId) || instanceId;
+      if (currentInstance) statusPayload.instance_id = currentInstance;
+      api("status", "GET", statusPayload)
         .then((data) => {
-          if (session === currentSession) updateStatus(data);
+          if (session !== currentSession) return;
+          if (data.instance_id) {
+            instanceId = data.instance_id;
+            instanceByChallenge.set(challengeId, data.instance_id);
+            saveInstanceId(data.instance_id);
+            setButtons(true);
+            updateStatus(data);
+            startPolling();
+          } else {
+            instanceId = null;
+            instanceByChallenge.delete(challengeId);
+            saveInstanceId(null);
+            setButtons(false);
+            updateStatus({ status: "stopped" });
+          }
+          const status = data.status || data.pod_phase;
+          if (status === "expired" || status === "stopped") {
+            instanceByChallenge.delete(challengeId);
+            if (instanceId === data.instance_id) instanceId = null;
+            saveInstanceId(null);
+          }
         })
         .catch(() => {
           if (session === currentSession) {
@@ -261,10 +385,11 @@
             setButtons(false);
           }
         });
-      startPolling();
-    }
+    };
+    setTimeout(runStatusCheck, 150);
   }
 
+  // Toggle start/extend button states.
   function setButtons(isRunning) {
     if (!startBtn || !document.contains(startBtn)) {
       startBtn = document.getElementById("start-instance");
@@ -278,20 +403,26 @@
       startBtn.classList.remove("btn-success");
       startBtn.classList.add("btn-danger");
       startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Instance';
+      startBtn.disabled = false;
       if (extendBtn) extendBtn.disabled = false;
     } else {
       startBtn.dataset.mode = "stopped";
       startBtn.classList.remove("btn-danger");
       startBtn.classList.add("btn-success");
       startBtn.innerHTML = '<i class="fas fa-play"></i> Start Instance';
+      startBtn.disabled = false;
       if (extendBtn) extendBtn.disabled = true;
     }
   }
 
+  // One global click handler (guards against duplicate script loads).
   function bindGlobalClickHandler() {
-    if (globalClickBound) return;
-    globalClickBound = true;
-    document.addEventListener("click", (event) => {
+    const existingHandler = window.__k8sInstanceClickHandler;
+    if (existingHandler) {
+      document.removeEventListener("click", existingHandler);
+    }
+    if (globalClickBound && existingHandler) return;
+    const handler = (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
       const button = target.closest("#start-instance, #stop-instance, #extend-instance");
@@ -300,27 +431,45 @@
       if (button.id === "start-instance") {
         const mode = button.dataset.mode || "stopped";
         if (mode === "running") {
-          stopInstance().catch(() => {});
+          const challengeId = challengeIdForElement(button);
+          activeChallengeId = challengeId;
+          stopInstance(challengeId).catch(() => {});
         } else {
-          startInstance().catch(() => {});
+          const challengeId = challengeIdForElement(button);
+          const currentInstance = instanceByChallenge.get(challengeId);
+          if (startInFlight || currentInstance) return;
+          activeChallengeId = challengeId;
+          button.dataset.mode = "starting";
+          button.disabled = true;
+          startInstance(challengeId).catch(() => {});
         }
       } else if (button.id === "stop-instance") {
-        stopInstance().catch(() => {});
+        const challengeId = challengeIdForElement(button);
+        activeChallengeId = challengeId;
+        stopInstance(challengeId).catch(() => {});
       } else if (button.id === "extend-instance") {
-        if (!instanceId) return;
+        const challengeId = challengeIdForElement(button);
+        activeChallengeId = challengeId;
+        const currentInstance = instanceByChallenge.get(challengeId) || instanceId;
+        if (!currentInstance) return;
         const extendSeconds = parseInt(button.dataset.extendSeconds || "300");
         api("extend", "POST", {
-          challenge_id: getActiveChallengeId(),
-          instance_id: instanceId,
+          challenge_id: challengeId,
+          instance_id: currentInstance,
           extend_seconds: Number.isNaN(extendSeconds) ? 300 : extendSeconds,
         })
-          .then(() => api("status", "GET", { challenge_id: getActiveChallengeId(), instance_id: instanceId }))
+          .then(() => api("status", "GET", { challenge_id: challengeId, instance_id: currentInstance }))
           .then(updateStatus)
           .catch(() => {});
       }
-    });
+    };
+    document.addEventListener("click", handler);
+    window.__k8sInstanceClickHandler = handler;
+    window.__k8sInstanceClickBound = true;
+    globalClickBound = true;
   }
 
+  // Clear polling when the modal closes.
   function bindModalCloseHandler() {
     if (modalCloseBound) return;
     modalCloseBound = true;
