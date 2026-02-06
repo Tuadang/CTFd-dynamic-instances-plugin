@@ -153,14 +153,19 @@
                   <button id="stop-instance" class="btn btn-danger px-4" style="display: none;">
                     <i class="fas fa-stop"></i> Stop Instance
                   </button>
+                  <button id="extend-instance" class="btn btn-outline-secondary px-4" data-extend-seconds="300">
+                    <i class="fas fa-clock"></i> +5 min
+                  </button>
                 </div>
 
                 <div class="text-center mb-3" id="instance-status-badge"></div>
 
                 <div class="input-group mb-3">
                   <span id="instance-connection-status" class="input-group-text text-danger">Unavailable</span>
-                  <span id="instance-connection-info" class="form-control text-muted">Not available</span>
+                  <span id="instance-connection-info" class="form-control">Not available</span>
                 </div>
+
+                <div class="text-center text-muted" id="instance-ttl"></div>
 
                 <template x-if="typeof instance_info !== 'undefined' && instance_info">
                   <div class="alert alert-info text-center mt-3" role="alert" x-html="instance_info"></div>
@@ -373,22 +378,3 @@
     </div>
   </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const startBtn = document.getElementById('start-instance');
-  const stopBtn = document.getElementById('stop-instance');
-  
-  if (startBtn && stopBtn) {
-    startBtn.addEventListener('click', function() {
-      startBtn.style.display = 'none';
-      stopBtn.style.display = 'inline-block';
-    });
-    
-    stopBtn.addEventListener('click', function() {
-      stopBtn.style.display = 'none';
-      startBtn.style.display = 'inline-block';
-    });
-  }
-});
-</script>
